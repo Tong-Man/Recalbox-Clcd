@@ -117,16 +117,11 @@ instead of
 
 ## Screenshots
 
-<<<<<<< HEAD
 <img src="http://i.imgur.com/PEAyQm2m.jpg">
 <img src="http://i.imgur.com/fsXfArEm.jpg">
 <img src="http://i.imgur.com/qesmRu6m.jpg">
-=======
-<img src="http://i.imgur.com/PEAyQm2.jpg" width="40%" height="40%">
-<img src="http://i.imgur.com/fsXfArE.jpg width="40%" height="40%">
-<img src="http://i.imgur.com/qesmRu6.jpg" width="40%" height="40%">
->>>>>>> 5f758ce822a658a9e14f20b7344981c26b4c9ee2
 
 ## Reference
 
-https://forum.recalbox.com/topic/8689/script-clcd-display-on-recalbox
+* https://forum.recalbox.com/topic/8689/script-clcd-display-on-recalbox
+* https://forum.recalbox.com/topic/5777/relier-%C3%A0-un-%C3%A9cran-et-afficher-du-texte/121
