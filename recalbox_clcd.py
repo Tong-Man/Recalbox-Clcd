@@ -18,11 +18,19 @@ lcdScroll Developed by: Eric Pavey ( https://bitbucket.org/AK_Eric/my-pi-project
 recalbox_clcd.py require I2C_LCD_driver.py, lcdScroll.py
 
 Small script written in Python for recalbox project (https://www.recalbox.com/) 
-running on Raspberry Pi 1,2,3, which displays all neccessary info on a 16x2 LCD display
+running on Raspberry Pi 1,2,3, which displays all necessary info on a 16x2 LCD display
 #Features:
 1. Current date and time, IP address of eth0, wlan0
 2. CPU temperature and speed
-3. Emulation and ROM information extracet from gamelist                      !!!!!!!!!!     YOU MUST SCRAPP YOUR ROMS        !!!!!!!!!!!!!
+3. Emulation and ROM information extracet from gamelist                      
+!!!!!!!!!!     YOU MUST SCRAPP YOUR ROMS        !!!!!!!!!!!!!
+
+# Display accented characters & Display & language
+By default this script has French message and will replace all accented characters by normal one (éèà will be eea) to support HD44780A00 Lcd model (support ASCII & Japanese fonts).
+If you have a model HD44780A02 (support ASCII + european fonts), and want to display accented characters,
+you will have to comment and uncomment some line in the script (search 'HD44780A02' comment in the script).
+
+To change language check line 47 and replace some message by one in your native language (search 'Display message' comment in this script)
 """
 
 import I2C_LCD_driver
@@ -35,9 +43,9 @@ from datetime import datetime
 from lcdScroll import Scroller
 import string
 import locale
-import unicodedata
+import unicodedata			# useless if HD44780A02, comment or delete
 
-# For DE language -> locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
+# To Change language of some message (date etc..), for German -> locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8'), Italian it_IT.UTF-8, English en_US.UTF-8 etc...
 locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
 
 def run_cmd(cmd):
@@ -68,7 +76,7 @@ def getTextInside (fullText, textBefore, textAfter, index) :
 		if len(fullText[index:]) >= begin +len(textBefore)+len(textAfter):
 			end = fullText[index+begin +len(textBefore):].find(textAfter)		#on cherche la fin 
 	if begin ==-1 or end ==-1 : #-1 = pas trouve, trouve est forcement entre 0 et len(fullText)-1
-		return (index, "pas_trouve")		# si on a pas retrouve le debut ou la fin on retourne une chaine vide 
+		return (index, "N/A")		# si on a pas retrouve le debut ou la fin on retourne une chaine vide 
 	else:
 		return (index + begin+  end + len(textAfter), fullText[index + begin+ len(textBefore): index + begin+ len(textBefore)+ end])	# sinon on retourne ce qui se trouve entre les 2
 
@@ -97,15 +105,16 @@ icons = [
 mylcd.lcd_load_custom_chars(icons)
 
 #display first message on screen
-mylcd.lcd_display_string("PI STATION 3", 1, 2) #firstline
-mylcd.lcd_display_string(" "+unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 3) #secondline
-sleep(5) # 5 sec delay
-mylcd.lcd_clear()
-# display a second message on screen
-mylcd.lcd_display_string("www.recalbox.com", 1) #firstline
-mylcd.lcd_display_string("RECALBOX v4.1", 2, 1) #secondline
+mylcd.lcd_display_string("PI STATION 3", 1, 2) #firstline	(mylcd.lcd_display_string ("message", line, position from left)
+mylcd.lcd_display_string(" "+unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 3) #secondline logo recalbox
 sleep(5) # 5 sec delay
 mylcd.lcd_clear() #delete strings on screen
+
+# display a second message on screen
+mylcd.lcd_display_string("www.recalbox.com", 1)
+mylcd.lcd_display_string("RECALBOX v4.1", 2, 1)
+sleep(5)
+mylcd.lcd_clear()
 
 while 1:
    
@@ -121,9 +130,9 @@ while 1:
 
       if length == 0 :
          ipaddr = run_cmd(cmdeth).replace("\n","")
-
+		
          if len(ipaddr) == 0 :
-            ipaddr = unichr(0)+unichr(1)+" Hors Ligne"
+            ipaddr = unichr(0)+unichr(1)+" Hors Ligne" # Display message on screen if not connect though lan or wifi.
          else:
             if len(ipaddr) == 15 :
                ipaddr = unichr(0)+run_cmd(cmdeth)
@@ -143,12 +152,11 @@ while 1:
       #print datetime.now().strftime( "%b %d  %H:%M:%S" )
       #print "IP " + str( ipaddr )
 	  #display the third message
-	  # Fix for LCD that do not have European characters roms (ex HD77480A00)
-	  # uncomment line below and comment the 2 next lines if you have an HD77480A02 which support European characters)
-	  # mylcd.lcd_display_string( datetime.now().strftime( "%b %d %H:%M:%S" ), 1, 0 )
+	  # comment the 3 next lines and uncomment the 4th one if you have an HD44780A02
       datefix = datetime.now().strftime('%d %b %H:%M:%S').decode('utf-8')
       datefix = unicodedata.normalize('NFKD', datefix).encode('ASCII', 'ignore')
       mylcd.lcd_display_string( datefix , 1, 0 )
+	  # mylcd.lcd_display_string( datetime.now().strftime( "%b %d %H:%M:%S" ), 1, 0 )
       mylcd.lcd_display_string( ipaddr, 2, 0 )
       sec = sec + 1
       sleep(1)
@@ -168,6 +176,7 @@ while 1:
          #print "CPU Speed: " + str( new_Speed )
 	 for i in range( 5 - len( str(new_Speed) ) ) :
              space = space + " "
+         # Display message on screen for CPU temp and speed
          mylcd.lcd_display_string( "Temp CPU :" + str( new_Temp ), 1, 0 )
          mylcd.lcd_display_string( "Freq CPU : " + space + str( new_Speed ), 2, 0 )
          sec = sec + 1  
@@ -182,23 +191,15 @@ while 1:
             (index, systeme) = getTextInside( result, "-system ", " -rom ",0)	
             #~ index = 0
             (index,rom ) = getTextInside( result, "-rom ", " -emulator ",0)
-			# Ignorer si kodi car pas de gamelist.xml, ni de rom
+			# Ignorer si kodi car pas de gamelist.xml, ni de rom, sinon récupération du nom dans gamelist.xml
             if systeme != "kodi" :
-				#print "systeme [" + systeme + "]"
-				#print "rom [" + rom + "]"
-				# Cas particulier si sous dossier dans le scrap pour cavestory et la dreamcast.
-				if systeme == "cavestory" :
-					nom_gamelist = os.path.basename(rom)
-					nom_gamelist = "./CaveStory/"+nom_gamelist
-				elif systeme == "dreamcast" :
-					nom_gamelist = rom[31:]
-					nom_gamelist = "./"+nom_gamelist
-				else :
-					nom_gamelist= os.path.basename(rom)
-					nom_gamelist = "./"+nom_gamelist
-				# Remplace & Par valeur XML pour retrouver le jeu dans gamelist.xml
+				nom_gamelist= rom.replace("/recalbox/share/roms/"+systeme,".")	
+				nom_gamelist= rom.replace("/recalbox/share/roms/"+systeme,".")
+				if systeme == "scummvm" :
+					# Pour scrap différent des Scummvms (pointe sur un dossier et non sur un fichier)
+					nom_gamelist = os.path.dirname(nom_gamelist)
+				# Remplace & par valeur XML pour retrouver le jeu dans gamelist.xml
 				nom_gamelist = string.replace(nom_gamelist,'&','&amp;')
-				#print "nom_gamelist ["+nom_gamelist +"]"
 				f=open("/recalbox/share/roms/"+ systeme + "/gamelist.xml", 'r') 	# on ouvre le fichier 
 				# ici on considere que le fichier est dans le meme repertoire mais tu peux aller le chercher ou tu veux avec un chemin absolu ex= "/mondossier/gamelist.xml" ou relatif ex= "../mondossier/gamelist.xml"
 				buf = f.read()				# on lit tout ce qu'il y a dedans (stocke dans un buffer en RAM)
@@ -216,7 +217,7 @@ while 1:
 				genre = ""
 				players = ""
 
-				if gameData != "pas_trouve": # test si jeu trouvé dans gamelist.xml 
+				if gameData != "N/A": # test si jeu trouvé dans gamelist.xml 
 					(index2,name) = getTextInside( gameData, "<name>","</name>",0)	# name 
 					(index2,desc) = getTextInside( gameData, "<desc>","</desc>",0)	#desc
 					(index2,image) = getTextInside( gameData, "<image>","</image>",0)	#image
@@ -226,7 +227,6 @@ while 1:
 					(index2,publisher) = getTextInside( gameData, "<publisher>","</publisher>",0)	#publisher
 					(index2,genre) =  getTextInside( gameData, "<genre>","</genre>",0)	#genre         
 					(index2,players) =  getTextInside( gameData, "<players>","</players>",0)	#players
-					name = string.replace(name,'&amp;','&')	# Fix for & xml characters
 					#print "name [" + name + "] description [" + desc + "] image [" + image + "] rating [" + str(rating) + "] releasedate [" + releasedate[:-11] + "] developer [" + developer + "] publisher [" + publisher + "] genre [" + genre + "] players [" + players + "]"
 					systemMap = { 
 					# Nintendo
@@ -293,18 +293,19 @@ while 1:
 					"ports":"Ports",
 					"notice":"TURN OFF",
 					}
-					system = name[:16]
-					plateforme = systemMap.get(systeme) 			
-					rom = "Titre : " + name + " - Plateforme : " + plateforme + " - Genre : " + genre + " - Joueur(s) : " + players + " - Note : " + str(rating) + " - Date de sortie : " + releasedate[:-11] + " par " + developer + " pour " + publisher + "."
-					#print "firstline : [" + firstline + "]"
-					#print "secondline : [" + secondline + "]"
-					# Comment 4 next lines if you have an HD77480A02 which support European characters
-					system = system.decode('utf-8')
-					system = unicodedata.normalize('NFKD', system).encode('ASCII', 'ignore')
-					rom = rom.decode('utf-8')
-					rom = unicodedata.normalize('NFKD', rom).encode('ASCII', 'ignore')
+					name = string.replace(name,'&amp;','&')	# Fix for & xml characters
+					rom_name = name[:16]
+					plateforme = systemMap.get(systeme) 	
+					# Display message that will be use for scroller; lines
+					lines = "Titre : " + name + " - Plateforme : " + plateforme + " - Genre : " + genre + " - Joueur(s) : " + players + " - Note : " + str(rating) + " - Date de sortie : " + releasedate[:-11] + " par " + developer + " pour " + publisher + "."
+					lines = string.replace(lines,'&amp;','&')
+					# Comment or delete the 4 next lines if you have an HD44780A02
+					rom_name = rom_name.decode('utf-8')
+					rom_name = unicodedata.normalize('NFKD', rom_name).encode('ASCII', 'ignore')
+					lines = lines.decode('utf-8')
+					lines = unicodedata.normalize('NFKD', lines).encode('ASCII', 'ignore')
+					
 					flag = "TURN OFF"
-					lines = rom
 					wait = 0
 					speed = 0.1
 
@@ -313,9 +314,9 @@ while 1:
 					while True :
 						mylcd.lcd_clear()
 						if wait < 11 and systeme != flag:
-							message = scroller.scroll()       
-							mylcd.lcd_display_string( "%s" %(system), 1, 0 )
-							mylcd.lcd_display_string( "%s" %(message), 2 )
+							scroller_msg = scroller.scroll()       
+							mylcd.lcd_display_string( "%s" %(rom_name), 1, 0 )
+							mylcd.lcd_display_string( "%s" %(scroller_msg), 2 )
 							sleep(speed)
 							wait = wait + 0.1
 						else :
