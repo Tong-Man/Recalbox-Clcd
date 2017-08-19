@@ -28,12 +28,62 @@ running on Raspberry Pi 2,3, which displays all necessary info on a 16x2 CLCD di
 
 ## Installation
 
+#### Prerequisites
+
+You will need an CLCD I2c like the HD44780 with rom A00 (Ascii support + japanese characters) or A02 (Ascii + European Characters)
+
+<img src="http://i.imgur.com/YrDDhwUm.jpg">
+
+
 #### Raspberry Pi I2C GPIO Pinout
 
 Connection of the I2c to a raspberry pi 3
 
 <img src="http://i.imgur.com/NKswbgr.png">
 
+
+
+#### Activate I2C inside recalbox
+
+* connect in ssh to your recalbox and mount partition to rw mode 
+```
+mount -o remount, rw /
+```
+
+* Edit /etc/modules.conf
+* Add at the end of the file
+```
+i2c-bcm2708
+i2c-dev
+```
+
+* Edit the /boot/config.txt
+add at **the end of line**
+```
+bcm2708.vc_i2c_override=1
+```
+*  reboot your recalbox
+
+
+#### Check I2C address 
+You should check your I2C address of 16x2 CLCD as this device can have different adress.
+Those are two address each other normally => 0x27 or 0x3f.
+
+Execute the following command (could take some time to complete)
+```
+i2cdetect -y 1
+```
+<pre><code>
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- -- -- -- 27 -- -- -- -- -- -- -- --
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --</code></pre>
+
+In our example the I2C adress is 0x27
 
 #### Scripts installation
 
@@ -63,48 +113,15 @@ Chmod +x /recalbox/scripts/lcdScroll.py
 Chmod +x /etc/init.d/S97LCDInfoText
 ```
 
-#### Activate I2C inside recalbox
-
-* Edit /etc/modules.conf
-* Add at the end of the file
-```
-i2c-bcm2708
-i2c-dev
-```
-
-* Edit the /boot/config.txt
-add at **the end of line**
-```
-bcm2708.vc_i2c_override=1
-```
-*  reboot
-
-
-#### Check I2C address 
-You should check your I2C address of 16x2 CLCD as this device can have different adress.
-Those are two address each other normally => 0x27 or 0x3f.
-
-Execute the following command (could take some time to complete)
-```
-i2cdetect -y 1
-```
-<pre><code>
-     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-00:          -- -- -- -- -- -- -- -- -- -- -- -- --
-10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-20: -- -- -- -- -- -- -- 27 -- -- -- -- -- -- -- --
-30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --</code></pre>
-
-edit line #22 in I2C_LCD_driver.py in /recalbox/scripts with the correct adress show by the command (in this example :0x27).
+* edit line #22 in I2C_LCD_driver.py in /recalbox/scripts with the correct I2C adress, you have recover before (in our example :0x27).
 
 <pre><code>nano I2C_LCD_driver.py
 
 # LCD Address
 ADDRESS = 0x27 # or 0x3f
 </code></pre>
+
+* reboot your recalbox, the script will now launch automatically on start, and exit and turn off LCD backlight during shutdown of your recalbox
 
 ## Important note
 

@@ -81,7 +81,7 @@ def getTextInside (fullText, textBefore, textAfter, index) :
 		return (index + begin+  end + len(textAfter), fullText[index + begin+ len(textBefore): index + begin+ len(textBefore)+ end])	# sinon on retourne ce qui se trouve entre les 2
 
 mylcd = I2C_LCD_driver.lcd()
-mylcd.lcd_clear()
+mylcd.lcd_clear()  #delete strings on screen
 
 #get ip address of eth0 connection
 cmdeth = "ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
@@ -108,16 +108,13 @@ mylcd.lcd_load_custom_chars(icons)
 mylcd.lcd_display_string("PI STATION 3", 1, 2) #firstline	(mylcd.lcd_display_string ("message", line, position from left)
 mylcd.lcd_display_string(" "+unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 3) #secondline logo recalbox
 sleep(5) # 5 sec delay
-mylcd.lcd_clear() #delete strings on screen
-
 # display a second message on screen
+mylcd.lcd_clear()
 mylcd.lcd_display_string("www.recalbox.com", 1)
 mylcd.lcd_display_string("RECALBOX v4.1", 2, 1)
 sleep(5)
-mylcd.lcd_clear()
 
 while 1:
-   
    mylcd.lcd_clear()
    sec = 0
    while ( sec < 5 ) :
@@ -160,9 +157,8 @@ while 1:
       mylcd.lcd_display_string( ipaddr, 2, 0 )
       sec = sec + 1
       sleep(1)
-
-   mylcd.lcd_clear()
    sec = 0
+   mylcd.lcd_clear()
    while ( sec < 5 ) :
       space = ""
       # cpu Temp & Speed information
@@ -181,8 +177,6 @@ while 1:
          mylcd.lcd_display_string( "Freq CPU : " + space + str( new_Speed ), 2, 0 )
          sec = sec + 1  
          sleep(1)
-
-   mylcd.lcd_clear()
    sec = 0
    while ( sec < 1 ) :
       # show system & rom file information
@@ -252,7 +246,7 @@ while 1:
 					"neogeo":"Neo-Geo",
 					"mame":"MAME-libretro",
 					"fba":"FinalBurn Alpha",
-					"fba_libretro":"FinalBurn Alpha libreretro",
+					"fba_libretro":"FinalBurn Alpha libretro",
 					"advancemame":"Advance MAME",
 					# Computers
 					"msx":"MSX",
@@ -304,23 +298,18 @@ while 1:
 					rom_name = unicodedata.normalize('NFKD', rom_name).encode('ASCII', 'ignore')
 					lines = lines.decode('utf-8')
 					lines = unicodedata.normalize('NFKD', lines).encode('ASCII', 'ignore')
-					
-					flag = "TURN OFF"
-					wait = 0
-					speed = 0.1
 
 					# Create scroller instance:
+					wait = 0
+					speed = 0.1
+					mylcd.lcd_clear()
 					scroller = Scroller(lines=lines)
-					while True :
-						mylcd.lcd_clear()
-						if wait < 11 and systeme != flag:
+					while wait < 11:
 							scroller_msg = scroller.scroll()       
 							mylcd.lcd_display_string( "%s" %(rom_name), 1, 0 )
 							mylcd.lcd_display_string( "%s" %(scroller_msg), 2 )
 							sleep(speed)
 							wait = wait + 0.1
-						else :
-							break
 				sec = sec + 1
 				sleep(1)
             else :
