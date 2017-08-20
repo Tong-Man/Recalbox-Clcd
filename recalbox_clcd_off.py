@@ -24,10 +24,9 @@ from time import *
 import string
 
 mylcd = I2C_LCD_driver.lcd()
-
 mylcd.lcd_clear()
-mylcd.lcd_display_string("PI STATION 3", 1, 1)
-mylcd.lcd_display_string("Extinction...", 2, 2)
+mylcd.lcd_display_string("PI STATION 3", 1, 2)
+mylcd.lcd_display_string("Extinction", 2, 3)
 sleep(2)
 mylcd.lcd_clear()
 mylcd.backlight(0) #Disable backlight

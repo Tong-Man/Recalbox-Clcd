@@ -14,45 +14,66 @@ BTD_PID=$(ps -eo pid,args | grep "/usr/bin/python $RUN" | grep -v grep | awk '{p
 
 serviceStatus() {
    if [ ! -z "$BTD_PID" ]; then
-      echo -e '33[0mservice recalbox_clcd.py ['$BTD_PID'] [33[33;32m OK 33[0m]'
+      echo -e "$0 [RUNNING] ['$BTD_PID']"
    else
-      echo -e '33[0mservice recalbox_clcd.py [33[33;31m KO 33[0m]'
+      echo -e "$0 [NOT RUNNING]"
    fi
 }
 
 # Carry out specific functions when asked to by the system
 case "$1" in
    start)
-      echo "Starting script $RUN ..."
+      echo -e "Starting script $RUN ..."
       if [ -z "$BTD_PID" ]; then
          nice -n 19 $RUN&
 
          if [ $? -eq 0 ]; then
-            echo -e "33[0mscript $RUN [33[33;32m STARTED 33[0m]"
+            echo -e "$0 [STARTED]"
          fi
       else
-         echo "script $RUN already started ['$BTD_PID']!"
+         echo -e "$0 [ALREADY STARTED] ['$BTD_PID']!"
       fi
       #serviceStatus
    ;;
    stop)
-      echo "Stopping script $RUN ..."
       if [ ! -z "$BTD_PID" ]; then
+         echo -e "Stopping script $RUN ..."
          kill $BTD_PID
-         nice -n 19 $RUNSTOP& 
          if [ $? -eq 0 ]; then
-            echo -e "33[0mscript $RUN [33[33;31m STOPPED 33[0m]"
+            echo -e "$0 [STOPPED]"
+            nice -n 19 $RUNSTOP& 
          fi
+      else
+         echo -e "$0 [NOT RUNNING]"
       fi
       #serviceStatus
    ;;
    status)
       serviceStatus
    ;;
+   restart)
+      echo -e "Restarting script $RUN ..."
+        if [ ! -z "$BTD_PID" ]; then
+           echo "Stopping script $RUN ..."
+           kill $BTD_PID
+           if [ $? -eq 0 ]; then
+              echo -e "Starting script $RUN ..."
+              nice -n 19 $RUN&
+              echo -e "$0 [RESTARTED]"
+           fi
+        else
+           echo -e "Script $RUN not running"
+           echo -e "Starting script $RUN ..."
+           nice -n 19 $RUN&
+           if [ $? -eq 0 ]; then
+              echo -e "$0 [RESTARTED]"
+           fi
+        fi
+   ;;
    *)
-      echo "Usage: /etc/init.d/S97LCDInfoText {start | stop | status}"
+      echo -e "Usage: $0 {start | stop | restart | status}"
       exit 1
    ;;
 esac
 
-exit 0
+exit $?
