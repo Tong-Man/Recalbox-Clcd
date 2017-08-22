@@ -3,309 +3,331 @@
 """
 recalbox_clcd.py
 Author       : Choum
-Creation Date: 08/20/2017
-Blog         : https://forum.recalbox.com/topic/5777/relier-%C3%A0-un-%C3%A9cran-et-afficher-du-texte and original work : http://rasplay.org, http://forums.rasplay.org/, https://zzeromin.tumblr.com/
+Creation DATE: 08/22/2017
+Blog        : https://forum.recalbox.com/topic/5777/relier-%C3%A0-un-%C3%A9cran-et-afficher-du-texte
+and original work : http://rasplay.org, http://forums.rasplay.org/, https://zzeromin.tumblr.com/
+
 Thanks to    : Godhunter74 for first draft of recalbox script, zzeromin smyani, zerocool, GreatKStar
 
 Free and open for all to use. But put credit where credit is due.
 
 #Reference:
-I2C_LCD_driver developed by: Denis Pleic ( https://gist.github.com/DenisFromHR/cc863375a6e19dce359d )
-IP_Script Developed by: AndyPi ( http://andypi.co.uk/ )
-lcdScroll Developed by: Eric Pavey ( https://bitbucket.org/AK_Eric/my-pi-projects/src/28302f8f5657599e29cb5d55573d192b9fa30265/Adafruit_CharLCDPlate/lcdScroll.py?at=master&fileviewer=file-view-default )
+I2C_LCD_driver developed by: Denis Pleic (https://gist.github.com/DenisFromHR/cc863375a6e19dce359d)
+lcdScroll developed by: Eric Pavey
+( https://bitbucket.org/AK_Eric/my-pi-projects/src/28302f8f5657/Adafruit_CharLCDPlate/?at=master )
+Function run_cmd() from: AndyPi ( http://andypi.co.uk/ )
 
 #Notice:
 recalbox_clcd.py require I2C_LCD_driver.py, lcdScroll.py
 
-Small script written in Python for recalbox project (https://www.recalbox.com/) 
+Small script written in Python 2.7 for recalbox project (https://www.recalbox.com/)
 running on Raspberry Pi 1,2,3, which displays all necessary info on a 16x2 LCD display
 #Features:
-1. Current date and time, IP address of eth0, wlan0
+1. Current DATE and time, IP address of eth0, wlan0
 2. CPU temperature and speed
-3. Emulation and ROM information extract from gamelist                      
-!!!!!!!!!!     YOU MUST SCRAPP YOUR ROMS        !!!!!!!!!!!!!
+3. Emulation and ROM information extract from gamelist
+!!!!!!!!!!     YOU MUST SCRAPP YOUR ROMS to see roms infos        !!!!!!!!!!!!!
 
-# Display accented characters & Display & language
-By default this script has French message and will replace all accented characters by normal one (éèà will be eea) to support HD44780A00 clcd model (support ASCII & Japanese fonts).
-If you have a model HD44780A02 (support ASCII + european fonts), and want to display accented characters,
-you will have to comment and uncomment some line in the script (search 'HD44780A02' comment in the script).
+# Note display accented characters & language
+By default this script has French message and will remove all accented characters (éèà will be eea)
+to support HD44780A00 lcd model (which only support ASCII & Japanese fonts).
 
-To change language check line 47 and replace some message by one in your native language (search 'Display message' comment in this script)
+If you have a model HD44780A02 (support ASCII + european fonts), and want to display accented
+characters, you will have to comment and uncomment some line in the script.
+Search 'HD44780A02' comment in the script.
+
+To change language check line 47 and replace some message by one in your native language
+search 'Display message' comment in this script and comment some lines.
 """
-
-import I2C_LCD_driver
 import os
-from os import popen
-from sys import exit
-from subprocess import *
-from time import *
-from datetime import datetime
-from lcdScroll import Scroller
 import string
 import locale
 import unicodedata  # useless if HD44780A02, comment or delete
+from subprocess import Popen
+from subprocess import PIPE
+from datetime import datetime
+from time import sleep
+import I2C_LCD_driver
+from lcdScroll import Scroller
 
-# To Change language of some message (date etc..), for German -> locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8'), Italian it_IT.UTF-8, English en_US.UTF-8 etc...
+# To Change language of some message (DATE etc..),
+# for German -> locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8'),
+# Italian it_IT.UTF-8, English en_US.UTF-8 etc...
 locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
 
 def run_cmd(cmd):
-   # runs whatever is in the cmd variable in the terminal
-   p = Popen(cmd, shell=True, stdout=PIPE)
-   output = p.communicate()[0]
-   return output
+    """ runs whatever is in the cmd variable in the terminal"""
+    cde = Popen(cmd, shell=True, stdout=PIPE)
+    output = cde.communicate()[0]
+    return output
 
 def get_cpu_temp():
-   # get the cpu temp
-   tempFile = open("/sys/class/thermal/thermal_zone0/temp")
-   cpu_temp = tempFile.read()
-   tempFile.close()
-   return float(cpu_temp)/1000
+    """ get the cpu temp """
+    slop = open("/sys/class/thermal/thermal_zone0/temp")
+    cpu_temp = slop.read()
+    slop.close()
+    return float(cpu_temp)/1000
 
 def get_cpu_speed():
-   # get the cpu speed
-   tempFile = open("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
-   cpu_speed = tempFile.read()
-   tempFile.close()
-   return float(cpu_speed)/1000
-   
-def conv_ascii(input):
-    input = input.decode('utf-8')
-    input = unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
-    return input
+    """ get the cpu speed """
+    slop = open("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+    cpu_speed = slop.read()
+    slop.close()
+    return float(cpu_speed)/1000
 
-def getTextInside (fullText, textBefore, textAfter, index) :
+def conv_ascii(entree):
+    """ convert UTF-8 string to ASCII"""
+    entree = entree.decode('utf-8')
+    entree = unicodedata.normalize('NFKD', entree).encode('ASCII', 'ignore')
+    return entree
+
+def get_txt_betw(fulltext, text_before, text_after):
+    """ return text in fulltext between text_before & text_after if exist, else return N/A string"""
+    index = 0
     begin = -1
     end = -1
-    if index < len(fullText[index:]) - len(textBefore):
-        begin = fullText[index:].find(textBefore) #on cherche le debut 
-        if len(fullText[index:]) >= begin +len(textBefore)+len(textAfter):
-            end = fullText[index+begin +len(textBefore):].find(textAfter) #on cherche la fin 
-    if begin ==-1 or end ==-1 : #-1 = pas trouve, trouve est forcement entre 0 et len(fullText)-1
-        return (index, "N/A") # si on a pas retrouve le debut ou la fin on retourne une chaine vide 
+    if index < len(fulltext[index:]) - len(text_before):
+        begin = fulltext[index:].find(text_before) # search start (count str)
+        if len(fulltext[index:]) >= begin +len(text_before)+len(text_after):
+            end = fulltext[index+begin +len(text_before):].find(text_after) # search end (count str)
+    if begin == -1 or end == -1: # -1 = not found, found is between 0 et (fullText)-1
+        return"N/A" # if not found return string
+    return fulltext[index + begin + len(text_before): index + begin+ len(text_before)+ end]
+                # return string between start and end
+
+def get_info_gamelist(path_gamelist, systeme):
+    """ return infos from gamelist.txt for a specific GAMELIST_PATH and SYSTEM into a string list\n
+    List[index] description\n
+    [0]name       [1]description    [2]image_path    [3]rating    [4]release date (year)\r
+    [5]developer       [6]publisher     [7]genre,       [8]players number  [9] system\n
+    return N/A for missing section, return scrap message if unscrap rom found"""
+    path_gamelist = string.replace(path_gamelist, '&', '&amp;')
+    fic = open("/recalbox/share/roms/"+systeme+"/gamelist.xml", 'r') # Open file
+    buf = fic.read()  # Read file into var
+    fic.close()  # Close file
+    gamedata = get_txt_betw(buf, "<path>"+path_gamelist, "</game>")
+    tableau = []
+    if gamedata != "N/A":  # test if game is found in gamelist
+        tableau.append(get_txt_betw(gamedata, "<name>", "</name>"))
+        tableau.append(get_txt_betw(gamedata, "<desc>", "</desc>"))
+        tableau.append(get_txt_betw(gamedata, "<image>", "</image>"))
+        tableau.append(get_txt_betw(gamedata, "<rating>", "</rating>"))
+        tableau.append(get_txt_betw(gamedata, "<releasedate>", "</releasedate>"))
+        tableau.append(get_txt_betw(gamedata, "<developer>", "</developer>"))
+        tableau.append(get_txt_betw(gamedata, "<publisher>", "</publisher>"))
+        tableau.append(get_txt_betw(gamedata, "<genre>", "</genre>"))
+        tableau.append(get_txt_betw(gamedata, "<players>", "</players>"))
+        tableau.append(SYSTEMMAP.get(systeme))
+        if tableau[4] != "N/A": # test if date exist then keep only year
+            tableau[4] = tableau[4][:-11]
+        tableau[3] = str(float(tableau[3])*10) # rating to 10 instead of 1
+        tableau = [x.replace('&amp;', '&') for x in tableau] # Fix for & xml character
+        # Comment or delete the next line if you have an HD44780A02
+        tableau = [conv_ascii(x) for x in tableau]
+    else: # msg if rom not present in gamelist
+        for txt in range(10):
+            txt = "ROM PAS SCRAP"
+            tableau.append(txt)
+    return tableau
+
+def get_ip_adr():
+    """ return IP of eth or wlan interface and add space to math 15 characters lenght,
+    return String Hors-ligne if not connected"""
+    # wlan ip address
+    ipaddr = run_cmd(CMD_WLAN).replace("\n", "")
+    # selection of wlan or eth address
+    #  length = len(ipaddr)
+    space = ""
+    if ipaddr == "":
+        ipaddr = run_cmd(CMD_ETH0).replace("\n", "")
+        if ipaddr == "":
+            ipaddr = unichr(0)+unichr(1)+"  Hors-ligne  " # Display message if no lan or wifi ip
+        else:
+            if len(ipaddr) == 15:
+                ipaddr = unichr(0)+run_cmd(CMD_ETH0)
+            else:
+                for _ in range(15-len(ipaddr)):
+                    space = space + " "
+                ipaddr = unichr(0)+space+run_cmd(CMD_ETH0)
     else:
-        return (index + begin+  end + len(textAfter), fullText[index + begin+ len(textBefore): index + begin+ len(textBefore)+ end])    # sinon on retourne ce qui se trouve entre les 2
+        if len(ipaddr) == 15:
+            ipaddr = unichr(1)+run_cmd(CMD_WLAN)
+        else:
+            for _ in range(15-len(ipaddr)):
+                space = space + " "
+            ipaddr = unichr(1)+space+run_cmd(CMD_WLAN)
+    return ipaddr
 
 #liste des systèmes
-systemMap = { 
-                # Nintendo
-                        "snes":"Super Nes", # Super Famicon
-                        "nes":"Nes ", # Famicom
-                        "n64":"Nintendo 64",
-                        "gba":"GameBoy Advance",
-                        "gb":"GameBoy",
-                        "gbc":"GameBoy Color",
-                        "fds":"Famicom Disk System",
-                        "virtualboy":"Virtual Boy",
-                        "gamecube":"GameCube",
-                        "wii":"Wii",
-                #Sega
-                        "sg1000":"SG-1000",
-                        "mastersystem":"Master System", #Sega Mark III
-                        "megadrive":"Mega Drive", #Sega Genesis
-                        "gamegear":"Game Gear",
-                        "sega32x":"Mega Drive 32X ", #Genesis 32X
-                        "segacd":"Mega-CD", #Sega CD
-                        "dreamcast":"Dreamcast",
-                # Arcade
-                        "neogeo":"Neo-Geo",
-                        "mame":"MAME-libretro",
-                        "fba":"FinalBurn Alpha",
-                        "fba_libretro":"FinalBurn Alpha libretro",
-                        "advancemame":"Advance MAME",
-                # Computers
-                        "msx":"MSX",
-                        "msx1":"MSX1",
-                        "msx2":"MSX2",
-                        "amiga":"Amiga",
-                        "amstradcpc":"Amstrad CPC",
-                        "apple2":"Apple II",
-                        "atarist":"Atari ST",
-                        "zxspectrum":"ZX Spectrum",
-                        "o2em":"Odyssey 2",
-                        "zx81":"Sinclair ZX81",
-                        "dos":"MS-DOS",
-                        "c64":"Commodore 64",
-                # autres
-                        "ngp":"Neo-Geo Pocket",
-                        "ngpc":"Neo-Geo Pocket Color",
-                        "gw":"Game and Watch",
-                        "vectrex":"Vectrex",
-                        "lynx":"Atari Lynx",
-                        "lutro":"Lutro",
-                        "wswan":"WonderSwan",
-                        "wswanc":"WonderSwan Color",
-                        "pcengine":"PC-Engine", #TurboGrafx-16 
-                        "pcenginecd":"PC-Engine CD", #TurboGrafx-CD
-                        "supergrafx":"PC Engine SuperGrafx",
-                        "atari2600":"Atari 2600",
-                        "atari7800":"Atari 7800",
-                        "prboom":"PrBoom",
-                        "psx":"PlayStation",
-                        "cavestory":"Cave Story",
-                        "scummvm":"ScummVM",
-                        "colecovision":"ColecoVision",
-                        "psp":"PSP",    # PlayStation Portable
-                # Logiciels
-                        "kodi":"KODI",
-                        "moonlight":"Moonlight",
-                        "imageviewer":"Visionneuse d'images",
-                        }
+SYSTEMMAP = {
+    # Nintendo
+    "snes":"Super Nes", # Super Famicon
+    "nes":"Nes ", # Famicom
+    "n64":"Nintendo 64",
+    "gba":"GameBoy Advance",
+    "gb":"GameBoy",
+    "gbc":"GameBoy Color",
+    "fds":"Famicom Disk System",
+    "virtualboy":"Virtual Boy",
+    "gamecube":"GameCube",
+    "wii":"Wii",
+    #Sega
+    "sg1000":"SG-1000",
+    "mastersystem":"Master System", #Sega Mark III
+    "megadrive":"Mega Drive", #Sega Genesis
+    "gamegear":"Game Gear",
+    "sega32x":"Mega Drive 32X ", #Genesis 32X
+    "segacd":"Mega-CD", #Sega CD
+    "dreamcast":"Dreamcast",
+    # Arcade
+    "neogeo":"Neo-Geo",
+    "mame":"MAME-libretro",
+    "fba":"FinalBurn Alpha",
+    "fba_libretro":"FinalBurn Alpha libretro",
+    "advancemame":"Advance MAME",
+    # Computers
+    "msx":"MSX",
+    "msx1":"MSX1",
+    "msx2":"MSX2",
+    "amiga":"Amiga",
+    "amstradcpc":"Amstrad CPC",
+    "apple2":"Apple II",
+    "atarist":"Atari ST",
+    "zxspectrum":"ZX Spectrum",
+    "o2em":"Odyssey 2",
+    "zx81":"Sinclair ZX81",
+    "dos":"MS-DOS",
+    "c64":"Commodore 64",
+    # autres
+    "ngp":"Neo-Geo Pocket",
+    "ngpc":"Neo-Geo Pocket Color",
+    "gw":"Game and Watch",
+    "vectrex":"Vectrex",
+    "lynx":"Atari Lynx",
+    "lutro":"Lutro",
+    "wswan":"WonderSwan",
+    "wswanc":"WonderSwan Color",
+    "pcengine":"PC-Engine",#  TurboGrafx-16
+    "pcenginecd":"PC-Engine CD", #TurboGrafx-CD
+    "supergrafx":"PC Engine SuperGrafx",
+    "atari2600":"Atari 2600",
+    "atari7800":"Atari 7800",
+    "prboom":"PrBoom",
+    "psx":"PlayStation",
+    "cavestory":"Cave Story",
+    "scummvm":"ScummVM",
+    "colecovision":"ColecoVision",
+    "psp":"PSP",    # PlayStation Portable
+    # Logiciels
+    "kodi":"KODI",
+    "moonlight":"Moonlight",
+    "imageviewer":"Visionneuse d'images",
+    }
 
-mylcd = I2C_LCD_driver.lcd()
-mylcd.lcd_clear()  #delete strings on screen
-
-#get ip address of eth0 connection
-cmdeth = "ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
-#get ip address of wlan0 connection
-cmdwlan = "ip addr show wlan0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
-#cmdwlan = "ip addr show wlan1 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
-
-old_Temp = new_Temp = get_cpu_temp()
-old_Speed = new_Speed = get_cpu_speed()
-old_rom = ""
 #draw icons not existing in [a-z]
-icons = [
-            [ 0b00000, 0b11111, 0b11011, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000 ], # Ethernet icon
-            [ 0b00000, 0b00000, 0b00001, 0b00001, 0b00101, 0b00101, 0b10101, 0b00000 ], # Wireless icon
-            [ 0b00000, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b00000, 0b00000 ], # recalbox logo Cross
-            [ 0b00000, 0b00100, 0b01110, 0b01010, 0b10001, 0b11111, 0b00000, 0b00000 ], # recalbox logo Triangle
-            [ 0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110, 0b00000, 0b00000 ], # recalbox logo Circle.
-            [ 0b00000, 0b11111, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000, 0b00000 ]  # recalbox logo Square
-        ]
+ICONS = [
+    [0b00000, 0b11111, 0b11011, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000], # Ethernet icon
+    [0b00000, 0b00000, 0b00001, 0b00001, 0b00101, 0b00101, 0b10101, 0b00000], # Wireless icon
+    [0b00000, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b00000, 0b00000], # logo Cross
+    [0b00000, 0b00100, 0b01110, 0b01010, 0b10001, 0b11111, 0b00000, 0b00000], # logo Triangle
+    [0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110, 0b00000, 0b00000], # logo Circle
+    [0b00000, 0b11111, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000, 0b00000]  # logo Square
+    ]
+
+# IP Adress command
+CMD_ETH0 = "ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
+CMD_WLAN = "ip addr show wlan0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
+#CMD_WLAN = "ip addr show wlan1 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
+
+OLD_TEMP = NEW_TEMP = get_cpu_temp()
+OLD_SPEED = NEW_SPEED = get_cpu_speed()
+OLD_ROM = ""
+
+MYLCD = I2C_LCD_driver.lcd()
+MYLCD.lcd_clear()  #delete strings on screen
 
 # Load logo chars (icons)
-mylcd.lcd_load_custom_chars(icons)
+MYLCD.lcd_load_custom_chars(ICONS)
 
 #display Boot message & logo
-mylcd.lcd_display_string("PI STATION 3", 1, 2) #firstline    (mylcd.lcd_display_string ("message", line, position from left)
-mylcd.lcd_display_string(unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 4) #secondline logo recalbox
-sleep(5) # 5 sec delay
-mylcd.lcd_clear()
-mylcd.lcd_display_string("RECALBOX 4.1", 1, 2)
-mylcd.lcd_display_string("www.recalbox.com", 2)
+# MYLCD.lcd_display_string("message", line, position from left side)
+MYLCD.lcd_display_string("PI STATION 3", 1, 2)
+MYLCD.lcd_display_string(unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 4)
+sleep(5) # 5 SEC delay
+MYLCD.lcd_clear()
+MYLCD.lcd_display_string("RECALBOX 4.1", 1, 2)
+MYLCD.lcd_display_string("www.recalbox.com", 2)
 sleep(5)
 
 while 1:
-    mylcd.lcd_clear()
-    sec = 0
-    while ( sec < 5 ) :
-        # wlan ip address
-        ipaddr = run_cmd(cmdwlan).replace("\n","")
-        # selection of wlan or eth address
-        length = len(ipaddr)
-        space = ""
-
-        if length == 0 :
-            ipaddr = run_cmd(cmdeth).replace("\n","")
-
-            if len(ipaddr) == 0 :
-                ipaddr = unichr(0)+unichr(1)+"  Hors-ligne" # Display message on screen if not connect though lan or wifi.
-            else :
-                if len(ipaddr) == 15 :
-                    ipaddr = unichr(0)+run_cmd(cmdeth)
-                else :
-                    for i in range( 15-len(ipaddr) ) :
-                        space = space + " "
-                    ipaddr = unichr(0)+space+run_cmd(cmdeth)
-        else :
-            if len(ipaddr) == 15 :
-                ipaddr = unichr(1)+run_cmd(cmdwlan)
-            else :
-                for i in range( 15-len(ipaddr) ) :
-                    space = space + " "
-                ipaddr = unichr(1)+space+run_cmd(cmdwlan)
-
-        #display the third message
-        date = datetime.now().strftime('%d %b %H:%M:%S')
+    MYLCD.lcd_clear()
+    SEC = 0
+    while SEC < 5:
+        IPADDR = get_ip_adr()
+        # display the third message
+        DATE = datetime.now().strftime('%d %b %H:%M:%S')
         # comment the next line if you have an HD44780A02
-        date = conv_ascii(date)
-        mylcd.lcd_display_string( date , 1, 0 )
-        mylcd.lcd_display_string( ipaddr, 2, 0 )
-        sec = sec + 1
+        DATE = conv_ascii(DATE)
+        MYLCD.lcd_display_string(DATE, 1, 0)
+        MYLCD.lcd_display_string(IPADDR, 2, 0)
+        SEC = SEC + 1
         sleep(1)
-    sec = 0
-    mylcd.lcd_clear()
-    while ( sec < 5 ) :
-        space = ""
+    SEC = 0
+    MYLCD.lcd_clear()
+    while SEC < 5:
+        SPACE = ""
         # cpu Temp & Speed information
-        new_Temp = get_cpu_temp()
-        new_Speed = int( get_cpu_speed() )
-
-        if old_Temp != new_Temp or old_Speed != new_Speed :
-            old_Temp = new_Temp
-            old_Speed = new_Speed
-            #print "CPU Temp: " + str( new_Temp )
-            #print "CPU Speed: " + str( new_Speed )
-        for i in range( 5 - len( str(new_Speed) ) ) :
-            space = space + " "
+        NEW_TEMP = get_cpu_temp()
+        NEW_SPEED = int(get_cpu_speed())
+        if OLD_TEMP != NEW_TEMP or OLD_SPEED != NEW_SPEED:
+            OLD_TEMP = NEW_TEMP
+            OLD_SPEED = NEW_SPEED
+            # print "CPU Temp: " + str(NEW_TEMP)
+            # print "CPU Speed: " + str(NEW_SPEED)
+        for i in range(5 - len(str(NEW_SPEED))):
+            SPACE = SPACE + " "
         # Display message on screen for CPU temp and speed
-        mylcd.lcd_display_string( "Temp CPU :" + str( new_Temp ), 1, 0 )
-        mylcd.lcd_display_string( "Freq CPU : " + space + str( new_Speed ), 2, 0 )
-        sec = sec + 1  
+        MYLCD.lcd_display_string("Temp CPU :"+ str(NEW_TEMP), 1, 0)
+        MYLCD.lcd_display_string("Freq CPU : "+ SPACE + str(NEW_SPEED), 2, 0)
+        SEC = SEC + 1
         sleep(1)
-    sec = 0
-    while ( sec < 1 ) :
+    SEC = 0
+    while SEC < 1:
         # show system & rom file information
-        result = run_cmd("ps | grep emulatorlauncher.py | grep -v 'c python' | grep -v grep")
-        if result != "" :
-            (index, systeme) = getTextInside( result, "-system ", " -rom ",0)    
-            #~ index = 0
-            (index,rom ) = getTextInside( result, "-rom ", " -emulator ",0)
-            if systeme != "kodi" :
-                # Ignorer si kodi car pas de gamelist.xml, ni de rom, sinon récupération du nom dans gamelist.xml, si nouvel rom découverte
-                if old_rom != rom :
-                    old_rom = rom
-                    nom_gamelist= rom.replace("/recalbox/share/roms/"+systeme,".")    
-                    nom_gamelist= rom.replace("/recalbox/share/roms/"+systeme,".")
-                    if systeme == "scummvm" :
-                        # Pour scrap différent des Scummvms (pointe sur un dossier et non sur un fichier)
-                        nom_gamelist = os.path.dirname(nom_gamelist)
-                    # Remplace & par valeur XML pour retrouver le jeu dans gamelist.xml
-                    nom_gamelist = string.replace(nom_gamelist,'&','&amp;')
-                    f=open("/recalbox/share/roms/"+ systeme + "/gamelist.xml", 'r')     # on ouvre le fichier
-                    buf = f.read()                # on lit tout ce qu'il y a dedans (stocke dans un buffer en RAM)
-                    f.close()                    #on ferme le fichier          
-                    (index,gameData) = getTextInside( buf, "<path>" + nom_gamelist, "</game>",0)
-                    #print gameData
-
-                    if gameData != "N/A": # test si jeu trouvé dans gamelist.xml 
-                        (index2,name) = getTextInside( gameData, "<name>","</name>",0)
-                        (index2,desc) = getTextInside( gameData, "<desc>","</desc>",0)
-                        (index2,image) = getTextInside( gameData, "<image>","</image>",0)
-                        (index2,rating) =  getTextInside( gameData, "<rating>","</rating>",0)    
-                        (index2,releasedate) = getTextInside( gameData, "<releasedate>","</releasedate>",0)
-                        (index2,developer) = getTextInside( gameData, "<developer>","</developer>",0)
-                        (index2,publisher) = getTextInside( gameData, "<publisher>","</publisher>",0)
-                        (index2,genre) =  getTextInside( gameData, "<genre>","</genre>",0)
-                        (index2,players) =  getTextInside( gameData, "<players>","</players>",0)
-                        #print "name [" + name + "] description [" + desc + "] image [" + image + "] rating [" + str(rating) + "] releasedate [" + releasedate[:-11] + "] developer [" + developer + "] publisher [" + publisher + "] genre [" + genre + "] players [" + players + "]"
-                        name = string.replace(name,'&amp;','&')    # Fix for & xml characters
-                        rom_name = name[:16]
-                        plateforme = systemMap.get(systeme)     
-                        # Display message that will be use for scroller; lines
-                        lines = "Titre : " + name + " - Plateforme : " + plateforme + " - Genre : " + genre + " - Joueur(s) : " + players + " - Note : " + str(rating) + " - Date de sortie : " + releasedate[:-11] + " par " + developer + " pour " + publisher + "."
-                        lines = string.replace(lines,'&amp;','&')
-                    else : # msg for rom not scrap
-                        rom_name = nom_gamelist
-                        lines = "Cette rom n'a pas été scrappé !"
-                # Comment or delete the 2 next lines if you have an HD44780A02
-                rom_name = conv_ascii(rom_name)
-                lines = conv_ascii(lines)
+        RESULT = run_cmd("ps | grep emulatorlauncher.py | grep -v 'c python' | grep -v grep")
+        if RESULT != "":
+            (SYSTEME) = get_txt_betw(RESULT, "-system ", " -rom ")
+            #~ INDEX = 0
+            (ROM) = get_txt_betw(RESULT, "-rom ", " -emulator ")
+            # Skip if kodi as it do not use gamelist and do not have rom info
+            if SYSTEME != "kodi":
+                if OLD_ROM != ROM: # Skip search if rom is still the same.
+                    OLD_ROM = ROM
+                    NOM_GAMELIST = ROM.replace("/recalbox/share/roms/"+SYSTEME, ".")
+                    if SYSTEME == "scummvm":
+                        # ScummVM scrap point on folder and not on file.
+                        NOM_GAMELIST = os.path.dirname(NOM_GAMELIST)
+                    # Search info in gamelist and prepare line 2 for scrolling
+                    (ROM_INFO) = get_info_gamelist(NOM_GAMELIST, SYSTEME)
+                    INFO_ROM = "Titre : "+ ROM_INFO[0] +" - Plateforme : "+ ROM_INFO[9] +\
+                               " - Genre : "+ ROM_INFO[7] +" - Joueur(s) : "+ ROM_INFO[8] +\
+                               " - Note : "+ (ROM_INFO[3]) +" - Date : "+ ROM_INFO[4] +\
+                               " - Par : "+ ROM_INFO[5] +" - Pour : "+ ROM_INFO[6] +"."
                 # Create scroller instance:
-                wait = 0
-                speed = 0.1
-                mylcd.lcd_clear()
-                scroller = Scroller(lines=lines)
-                while wait < 11:
-                    scroller_msg = scroller.scroll()       
-                    mylcd.lcd_display_string( rom_name, 1, 0 )
-                    mylcd.lcd_display_string( scroller_msg, 2 )
-                    sleep(speed)
-                    wait = wait + 0.1
-                sec = sec + 1
+                    SCROLLER = Scroller(lines=INFO_ROM)
+                WAIT = 0
+                SPEED = 0.1
+                MYLCD.lcd_clear()
+                while WAIT < 11:
+                    SCROLLER_MSG = SCROLLER.scroll()
+                    MYLCD.lcd_display_string(ROM_INFO[0][:16], 1, 0)
+                    MYLCD.lcd_display_string(SCROLLER_MSG, 2)
+                    sleep(SPEED)
+                    WAIT = WAIT + 0.1
+                SEC = SEC + 1
                 sleep(1)
-            else :
-            # A dev affichage pour kodi
-                sec = sec + 1
-        else :
-            sec=sec + 1
+            else:
+            # To do, display for Kodi
+                SEC = SEC + 1
+        else:
+            SEC = SEC + 1
