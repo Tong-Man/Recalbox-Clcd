@@ -23,7 +23,7 @@ recalbox_clcd.py require I2C_LCD_driver.py, lcdScroll.py
 Small script written in Python 2.7 for recalbox project (https://www.recalbox.com/)
 running on Raspberry Pi 1,2,3, which displays all necessary info on a 16x2 LCD display
 #Features:
-1. Current DATE and time, IP address of eth0, wlan0
+1. Current DATE and time, IP address
 2. CPU temperature and speed
 3. Emulation and ROM information extract from gamelist
 !!!!!!!!!!     YOU MUST SCRAPP YOUR ROMS to see roms infos        !!!!!!!!!!!!!
@@ -135,20 +135,22 @@ def get_ip_adr():
     return String Hors-ligne if not connected"""
     # wlan ip address
     ipaddr = run_cmd(CMD_WLAN).replace("\n", "")
+    print ipaddr
+    print CMD_WLAN
     # selection of wlan or eth address
     #  length = len(ipaddr)
     space = ""
     if ipaddr == "":
-        ipaddr = run_cmd(CMD_ETH0).replace("\n", "")
+        ipaddr = run_cmd(CMD_ETH).replace("\n", "")
         if ipaddr == "":
             ipaddr = unichr(0)+unichr(1)+"  Hors-ligne  " # Display message if no lan or wifi ip
         else:
             if len(ipaddr) == 15:
-                ipaddr = unichr(0)+run_cmd(CMD_ETH0)
+                ipaddr = unichr(0)+run_cmd(CMD_ETH)
             else:
                 for _ in range(15-len(ipaddr)):
                     space = space + " "
-                ipaddr = unichr(0)+space+run_cmd(CMD_ETH0)
+                ipaddr = unichr(0)+space+run_cmd(CMD_ETH)
     else:
         if len(ipaddr) == 15:
             ipaddr = unichr(1)+run_cmd(CMD_WLAN)
@@ -234,10 +236,13 @@ ICONS = [
     [0b00000, 0b11111, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000, 0b00000]  # logo Square
     ]
 
-# IP Adress command
-CMD_ETH0 = "ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
-CMD_WLAN = "ip addr show wlan0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
-#CMD_WLAN = "ip addr show wlan1 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
+# Detect network card, then IP Adress command
+ETH_NAME = run_cmd("ip addr show | awk '{print$2}' | grep eth | cut -f1 -d:")
+WLAN_NAME = run_cmd("ip addr show | awk '{print$2}' | grep wlan | cut -f1 -d:")
+ETH_NAME = ETH_NAME.replace("\n", "")
+WLAN_NAME = WLAN_NAME.replace("\n", "")
+CMD_ETH = "ip addr show "+ETH_NAME+" | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
+CMD_WLAN = "ip addr show "+WLAN_NAME+" | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"
 
 OLD_TEMP = NEW_TEMP = get_cpu_temp()
 OLD_SPEED = NEW_SPEED = get_cpu_speed()
