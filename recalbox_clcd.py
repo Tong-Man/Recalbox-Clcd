@@ -36,8 +36,7 @@ If you have a model HD44780A02 (support ASCII + european fonts), and want to dis
 characters, you will have to comment and uncomment some line in the script.
 Search 'HD44780A02' comment in the script.
 
-To change language check line 47 and replace some message by one in your native language
-search 'Display message' comment in this script and comment some lines.
+To change language check line 55 & 57 to set your native language
 """
 import os
 import string
@@ -57,10 +56,10 @@ locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
 
 # All Text are below, this is the line to translate if you want other language on screen
 #TXT = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :", " - Platform: ",\
-#       " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ", " - By: ", " - For: ")
+#       " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ", " - By: ", " - For: ", "Unknow")
 TXT = ("Hors-ligne", "ROM PAS SCRAP", "Temp CPU: ", "Fréq CPU: ", "Titre : ", \
                " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
-               " - Année : ", " - Par : ", " - Pour : ")
+               " - Année : ", " - Par : ", " - Pour : ", "Inconnu")
 
 def run_cmd(cmd):
     """ runs whatever is in the cmd variable in the terminal"""
@@ -110,7 +109,9 @@ def get_txt_betw(fulltext, text_before, text_after):
         if len(fulltext[index:]) >= begin +len(text_before)+len(text_after):
             end = fulltext[index+begin +len(text_before):].find(text_after) # search end (count str)
     if begin == -1 or end == -1: # -1 = not found, found is between 0 et (fullText)-1
-        return"N/A" # if not found return string
+        return TXT[12] # if not found return string
+    if fulltext[index + begin + len(text_before): index + begin+ len(text_before)+ end] == "":
+        return TXT[12]
     return fulltext[index + begin + len(text_before): index + begin+ len(text_before)+ end]
                 # return string between start and end
 
@@ -119,14 +120,14 @@ def get_info_gamelist(path_gamelist, systeme):
     List[index] description\n
     [0]name       [1]description    [2]image_path    [3]rating    [4]release date (year)\r
     [5]developer       [6]publisher     [7]genre,       [8]players number  [9] system\n
-    return N/A for missing section, return scrap message if unscrap rom found"""
+    return Unknow for missing section, return scrap message if unscrap rom found"""
     path_gamelist = string.replace(path_gamelist, '&', '&amp;')
     fic = open("/recalbox/share/roms/"+systeme+"/gamelist.xml", 'r') # Open file
     buf = fic.read()  # Read file into var
     fic.close()  # Close file
     gamedata = get_txt_betw(buf, "<path>"+path_gamelist, "</game>")
     tableau = []
-    if gamedata != "N/A":  # test if game is found in gamelist
+    if gamedata != TXT[12]:  # test if game is found in gamelist
         tableau.append(get_txt_betw(gamedata, "<name>", "</name>"))
         tableau.append(get_txt_betw(gamedata, "<desc>", "</desc>"))
         tableau.append(get_txt_betw(gamedata, "<image>", "</image>"))
@@ -137,16 +138,17 @@ def get_info_gamelist(path_gamelist, systeme):
         tableau.append(get_txt_betw(gamedata, "<genre>", "</genre>"))
         tableau.append(get_txt_betw(gamedata, "<players>", "</players>"))
         tableau.append(SYSTEMMAP.get(systeme))
-        if tableau[4] != "N/A": # test if date exist then keep only year
+        if tableau[4] != TXT[12]: # test if date exist then keep only year
             tableau[4] = tableau[4][:-11]
-        tableau[3] = str(float(tableau[3])*10) # rating to 10 instead of 1
+        if tableau[3] != TXT[12]:
+            tableau[3] = str(float(tableau[3])*10) # rating to 10 instead of 1 if rating exist
         tableau = [x.replace('&amp;', '&') for x in tableau] # Fix for & xml character
-        # Comment or delete the next line if you have an HD44780A02
-        tableau = [conv_ascii(x) for x in tableau]
     else: # msg if rom not present in gamelist (fill list)
         for txt in range(10):
             txt = TXT[1]
             tableau.append(txt)
+    # Comment or delete the next line if you have an HD44780A02
+    tableau = [conv_ascii(x) for x in tableau]
     return tableau
 
 def get_ip_adr():
@@ -308,7 +310,7 @@ while 1:
             OLD_SPEED = NEW_SPEED
         for i in range(5 - len(str(NEW_SPEED))):
             SPACE = SPACE + " "
-        # Display message on screen for CPU temp and speed
+        # Display CPU temp and speed
         MYLCD.lcd_display_string(TXT[2]+ str(NEW_TEMP), 1, 0)
         MYLCD.lcd_display_string(TXT[3]+ SPACE + str(NEW_SPEED), 2, 0)
         SEC = SEC + 1
@@ -319,15 +321,13 @@ while 1:
         RESULT = run_cmd("ps | grep emulatorlauncher.py | grep -v 'c python' | grep -v grep")
         if RESULT != "":
             (SYSTEME) = get_txt_betw(RESULT, "-system ", " -rom ")
-            #~ INDEX = 0
             (ROM) = get_txt_betw(RESULT, "-rom ", " -emulator ")
-            # Skip if kodi as it do not use gamelist and do not have rom info
-            if SYSTEME != "kodi":
+            if SYSTEME != "kodi": # Skip if kodi as it do not use gamelist and do not have rom info
                 if OLD_ROM != ROM: # Skip search if rom is still the same.
                     OLD_ROM = ROM
                     NOM_GAMELIST = ROM.replace("/recalbox/share/roms/"+SYSTEME, ".")
                     if SYSTEME == "scummvm":
-                        # ScummVM scrap point on folder and not on file.
+                        # ScummVM scrap point on folder not on a file.
                         NOM_GAMELIST = os.path.dirname(NOM_GAMELIST)
                     # Search info in gamelist and prepare Display message for scrolling of line 2
                     ROM_INFO = get_info_gamelist(NOM_GAMELIST, SYSTEME)
