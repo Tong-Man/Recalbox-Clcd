@@ -55,6 +55,13 @@ from lcdScroll import Scroller
 # Italian it_IT.UTF-8, English en_US.UTF-8 etc...
 locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
 
+# All Text are below, this is the line to translate if you want other language on screen
+#TXT = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :", " - Platform: ",\
+#       " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ", " - By: ", " - For: ")
+TXT = ("Hors-ligne", "ROM PAS SCRAP", "Temp CPU: ", "Fréq CPU: ", "Titre : ", \
+               " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
+               " - Année : ", " - Par : ", " - Pour : ")
+
 def run_cmd(cmd):
     """ runs whatever is in the cmd variable in the terminal"""
     cde = Popen(cmd, shell=True, stdout=PIPE)
@@ -82,12 +89,16 @@ def conv_ascii(entree):
     return entree
 
 def get_version():
-    """ return version of recalbox"""
+    """ return pi version & recalbox version"""
     fic = open("/recalbox/recalbox.version", 'r')
     version = fic.read()  # Read file into var
     fic.close()  # Close file
     version = version.split('-', 1)[0] # remove detailed version when unstable version
-    return version
+    fic = open("/recalbox/recalbox.arch", 'r')
+    arch = fic.read()  # Read file into var
+    fic.close()  # Close file
+    arch = arch.split('rpi', 1)[1]
+    return (arch, version)
 
 def get_txt_betw(fulltext, text_before, text_after):
     """ return text in fulltext between text_before & text_after if exist, else return N/A string"""
@@ -134,7 +145,7 @@ def get_info_gamelist(path_gamelist, systeme):
         tableau = [conv_ascii(x) for x in tableau]
     else: # msg if rom not present in gamelist (fill list)
         for txt in range(10):
-            txt = "ROM PAS SCRAP"
+            txt = TXT[1]
             tableau.append(txt)
     return tableau
 
@@ -148,7 +159,7 @@ def get_ip_adr():
     if ipaddr == "":
         ipaddr = run_cmd(CMD_ETH).replace("\n", "")
         if ipaddr == "":
-            ipaddr = unichr(0)+unichr(1)+"  Hors-ligne  " # Display message if no lan or wifi ip
+            ipaddr = unichr(0)+unichr(1)+"  "+TXT[0] # Txt disconnect if no lan or wifi ip
         else:
             if len(ipaddr) == 15:
                 ipaddr = unichr(0)+run_cmd(CMD_ETH)
@@ -260,14 +271,15 @@ MYLCD.lcd_clear()  #delete strings on screen
 MYLCD.lcd_load_custom_chars(ICONS)
 # recover version
 VERSION = get_version()
+# Comment or delete the next line if you have an HD44780A02
+TXT = [conv_ascii(_) for _ in TXT]
 
-#display Boot message & logo
-# MYLCD.lcd_display_string("message", line, position from left side)
-MYLCD.lcd_display_string("PI STATION 3", 1, 2)
+#display Boot message & logo ("text, line, position from left side")
+MYLCD.lcd_display_string("PI STATION "+VERSION[0], 1, 2)
 MYLCD.lcd_display_string(unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 4)
-sleep(5) # 5 SEC delay
+sleep(5) # 5 secdelay
 MYLCD.lcd_clear()
-MYLCD.lcd_display_string("RECALBOX "+VERSION, 1, 1)
+MYLCD.lcd_display_string("RECALBOX "+VERSION[1], 1, 1)
 MYLCD.lcd_display_string("www.recalbox.com", 2)
 sleep(5)
 
@@ -276,10 +288,10 @@ while 1:
     SEC = 0
     while SEC < 5:
         IPADDR = get_ip_adr()
-        # display the third message
         DATE = datetime.now().strftime('%d %b %H:%M:%S')
-        # comment the next line if you have an HD44780A02
+        # Comment or delete the next line if you have an HD44780A02
         DATE = conv_ascii(DATE)
+        # display Date & IP
         MYLCD.lcd_display_string(DATE, 1, 0)
         MYLCD.lcd_display_string(IPADDR, 2, 0)
         SEC = SEC + 1
@@ -297,8 +309,8 @@ while 1:
         for i in range(5 - len(str(NEW_SPEED))):
             SPACE = SPACE + " "
         # Display message on screen for CPU temp and speed
-        MYLCD.lcd_display_string("Temp CPU :"+ str(NEW_TEMP), 1, 0)
-        MYLCD.lcd_display_string("Freq CPU : "+ SPACE + str(NEW_SPEED), 2, 0)
+        MYLCD.lcd_display_string(TXT[2]+ str(NEW_TEMP), 1, 0)
+        MYLCD.lcd_display_string(TXT[3]+ SPACE + str(NEW_SPEED), 2, 0)
         SEC = SEC + 1
         sleep(1)
     SEC = 0
@@ -317,12 +329,11 @@ while 1:
                     if SYSTEME == "scummvm":
                         # ScummVM scrap point on folder and not on file.
                         NOM_GAMELIST = os.path.dirname(NOM_GAMELIST)
-                    # Search info in gamelist and prepare line 2 for scrolling
-                    (ROM_INFO) = get_info_gamelist(NOM_GAMELIST, SYSTEME)
-                    INFO_ROM = "Titre : "+ ROM_INFO[0] +" - Plateforme : "+ ROM_INFO[9] +\
-                               " - Genre : "+ ROM_INFO[7] +" - Joueur(s) : "+ ROM_INFO[8] +\
-                               " - Note : "+ (ROM_INFO[3]) +" - Date : "+ ROM_INFO[4] +\
-                               " - Par : "+ ROM_INFO[5] +" - Pour : "+ ROM_INFO[6] +"."
+                    # Search info in gamelist and prepare Display message for scrolling of line 2
+                    ROM_INFO = get_info_gamelist(NOM_GAMELIST, SYSTEME)
+                    INFO_ROM = TXT[4] + ROM_INFO[0] + TXT[5] + ROM_INFO[9] + TXT[6] + ROM_INFO[7] +\
+                               TXT[7] + ROM_INFO[8] + TXT[8] + ROM_INFO[3] + TXT[9] + ROM_INFO[4] +\
+                               TXT[10] + ROM_INFO[5] + TXT[11]+ ROM_INFO[6] +"."
                 # Create scroller instance:
                     SCROLLER = Scroller(lines=INFO_ROM)
                 WAIT = 0
