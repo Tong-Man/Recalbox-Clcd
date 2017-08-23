@@ -81,6 +81,14 @@ def conv_ascii(entree):
     entree = unicodedata.normalize('NFKD', entree).encode('ASCII', 'ignore')
     return entree
 
+def get_version():
+    """ return version of recalbox"""
+    fic = open("/recalbox/recalbox.version", 'r')
+    version = fic.read()  # Read file into var
+    fic.close()  # Close file
+    version = version.split('-', 1)[0] # remove detailed version when unstable version
+    return version
+
 def get_txt_betw(fulltext, text_before, text_after):
     """ return text in fulltext between text_before & text_after if exist, else return N/A string"""
     index = 0
@@ -124,7 +132,7 @@ def get_info_gamelist(path_gamelist, systeme):
         tableau = [x.replace('&amp;', '&') for x in tableau] # Fix for & xml character
         # Comment or delete the next line if you have an HD44780A02
         tableau = [conv_ascii(x) for x in tableau]
-    else: # msg if rom not present in gamelist
+    else: # msg if rom not present in gamelist (fill list)
         for txt in range(10):
             txt = "ROM PAS SCRAP"
             tableau.append(txt)
@@ -135,10 +143,7 @@ def get_ip_adr():
     return String Hors-ligne if not connected"""
     # wlan ip address
     ipaddr = run_cmd(CMD_WLAN).replace("\n", "")
-    print ipaddr
-    print CMD_WLAN
-    # selection of wlan or eth address
-    #  length = len(ipaddr)
+    # selection if wlan or eth ip address
     space = ""
     if ipaddr == "":
         ipaddr = run_cmd(CMD_ETH).replace("\n", "")
@@ -253,6 +258,8 @@ MYLCD.lcd_clear()  #delete strings on screen
 
 # Load logo chars (icons)
 MYLCD.lcd_load_custom_chars(ICONS)
+# recover version
+VERSION = get_version()
 
 #display Boot message & logo
 # MYLCD.lcd_display_string("message", line, position from left side)
@@ -260,7 +267,7 @@ MYLCD.lcd_display_string("PI STATION 3", 1, 2)
 MYLCD.lcd_display_string(unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 4)
 sleep(5) # 5 SEC delay
 MYLCD.lcd_clear()
-MYLCD.lcd_display_string("RECALBOX 4.1", 1, 2)
+MYLCD.lcd_display_string("RECALBOX "+VERSION, 1, 1)
 MYLCD.lcd_display_string("www.recalbox.com", 2)
 sleep(5)
 
@@ -287,8 +294,6 @@ while 1:
         if OLD_TEMP != NEW_TEMP or OLD_SPEED != NEW_SPEED:
             OLD_TEMP = NEW_TEMP
             OLD_SPEED = NEW_SPEED
-            # print "CPU Temp: " + str(NEW_TEMP)
-            # print "CPU Speed: " + str(NEW_SPEED)
         for i in range(5 - len(str(NEW_SPEED))):
             SPACE = SPACE + " "
         # Display message on screen for CPU temp and speed

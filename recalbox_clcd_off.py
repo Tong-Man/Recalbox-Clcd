@@ -27,7 +27,7 @@ import I2C_LCD_driver
 MYLCD = I2C_LCD_driver.lcd()
 MYLCD.lcd_clear()
 MYLCD.lcd_display_string("PI STATION 3", 1, 2)
-MYLCD.lcd_display_string("Extinction", 2, 3) # Display message on shutdown
+MYLCD.lcd_display_string("Extinction", 2, 3) # Display a shutdown message when recalbox is turn off.
 sleep(2)
 MYLCD.lcd_clear()
 MYLCD.backlight(0) #Disable backlight
