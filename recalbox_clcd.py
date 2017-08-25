@@ -36,7 +36,8 @@ If you have a model HD44780A02 (support ASCII + european fonts), and want to dis
 characters, you will have to comment and uncomment some line in the script.
 Search 'HD44780A02' comment in the script.
 
-To change language check line 55 & 57 to set your native language
+Script support English, French, German, Italian, Spanish, Portuguese language
+If language is unsupported, display will be in English
 """
 import os
 import string
@@ -49,17 +50,49 @@ from time import sleep
 import I2C_LCD_driver
 from lcdScroll import Scroller
 
-# To Change language of some message (DATE etc..),
-# for German -> locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8'),
-# Italian it_IT.UTF-8, English en_US.UTF-8 etc...
-locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
-
-# All Text are below, this is the line to translate if you want other language on screen
-#TXT = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :", " - Platform: ",\
-#       " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ", " - By: ", " - For: ", "Unknow")
-TXT = ("Hors-ligne", "ROM PAS SCRAP", "Temp CPU: ", "Fréq CPU: ", "Titre : ", \
-               " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
-               " - Année : ", " - Par : ", " - Pour : ", "Inconnu")
+def get_language():
+    """ find the language in recalbox.conf file and use translate texts"""
+    fic = open("/recalbox/share/system/recalbox.conf", 'r')
+    for line in fic:
+        if 'system.language=' in line:
+            lang = line.replace("system.language=", "")
+            lang = lang.replace("\n", "")
+            break
+    else:
+        lang = "en_US"
+    fic.close()
+    # All Texts to translate are below, keep space, missing turkisk, chinese, basque.
+    if lang == "fr_FR":
+        txt = ("Hors-ligne", "ROM PAS SCRAP", "Temp CPU: ", "Fréq CPU: ", "Titre : ", \
+            " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
+            " - Année : ", " - Par : ", " - Pour : ", "Inconnu")
+        locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
+    elif lang == "de_DE":
+        txt = ("Offline", "ROM NICHT SCRAP", "CPU Temp: ", "CPU Freq: ", "Titel : ", \
+               " - Platform : ", " - Genre : ", " - Spieler(n) : ", " - Bewertung : ", \
+               " - Jahr : ", " - Durch : ", " - Für : ", "Unbekannt")
+        locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
+    elif lang == "pt_BR":
+        txt = ("Desconectado", "ROM NO SCRAPE", "Temp CPU: ", "Frec CPU: ", "Título : ", \
+               " - Plataforma : ", " - Tipo : ", " - Jogador(es) : ", " - Nota : ", \
+               " - Ano : ", " - Por : ", " - Para : ", "Desconhecido")
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    elif lang == "es_ES" or lang == "eu_ES":
+        txt = ("Desconectado", "ROM NO SCRAPEAR", "Temp CPU: ", "Frec CPU: ", "Titulo : ", \
+               " - Plataforma : ", " - Genero : ", " - Jugador(s) : ", " - Nota : ", \
+               " - Año : ", " - Por : ", " - Para : ", "Desconocido")
+        locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
+    elif lang == "it_IT":
+        txt = ("Off line", "ROM NON SCRAP", "Temp CPU: ", "Freq CPU: ", "Titolo : ", \
+               " - Piattaforma : ", " - Genere : ", " - Giocatori  : ", " - Note : ", \
+               " - Anno : ", " - Di : ", " - Per : ", "Sconosciuto")
+        locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
+    else:
+        txt = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :",\
+        " - Platform: ", " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ",\
+        " - By: ", " - For: ", "Unknow")
+        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    return txt
 
 def run_cmd(cmd):
     """ runs whatever is in the cmd variable in the terminal"""
@@ -81,6 +114,7 @@ def get_cpu_speed():
     slop.close()
     return float(cpu_speed)/1000
 
+# useless if HD44780A02, comment or delete
 def conv_ascii(entree):
     """ convert UTF-8 string to ASCII"""
     entree = entree.decode('utf-8')
@@ -178,6 +212,8 @@ def get_ip_adr():
             ipaddr = unichr(1)+space+run_cmd(CMD_WLAN)
     return ipaddr
 
+
+
 #liste des systèmes
 SYSTEMMAP = {
     # Nintendo
@@ -244,15 +280,20 @@ SYSTEMMAP = {
     "imageviewer":"Visionneuse d'images",
     }
 
-#draw icons not existing in [a-z]
+#draw icons not existing in [a-z], max 8
 ICONS = [
     [0b00000, 0b11111, 0b11011, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000], # Ethernet icon
     [0b00000, 0b00000, 0b00001, 0b00001, 0b00101, 0b00101, 0b10101, 0b00000], # Wireless icon
     [0b00000, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b00000, 0b00000], # logo Cross
     [0b00000, 0b00100, 0b01110, 0b01010, 0b10001, 0b11111, 0b00000, 0b00000], # logo Triangle
     [0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110, 0b00000, 0b00000], # logo Circle
-    [0b00000, 0b11111, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000, 0b00000]  # logo Square
+    [0b00000, 0b11111, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000, 0b00000],  # logo Square
+    [0b01110, 0b11111, 0b10101, 0b11111, 0b11111, 0b11111, 0b10101,	0b00000], # Ghost
+    [0b10001, 0b01010, 0b11111, 0b10101, 0b11111, 0b11111, 0b01010, 0b11011] # Invader
     ]
+
+# set language
+TXT = get_language()
 
 # Detect network card, then IP Adress command
 ETH_NAME = run_cmd("ip addr show | awk '{print$2}' | grep eth | cut -f1 -d:")
@@ -278,7 +319,8 @@ TXT = [conv_ascii(_) for _ in TXT]
 
 #display Boot message & logo ("text, line, position from left side")
 MYLCD.lcd_display_string("PI STATION "+VERSION[0], 1, 2)
-MYLCD.lcd_display_string(unichr(2)+" "+unichr(3)+" "+unichr(4)+" "+unichr(5), 2, 4)
+MYLCD.lcd_display_string(unichr(6)+"   "+unichr(2)+" "+unichr(3)+" "+unichr(4)+\
+                         " "+unichr(5)+"    "+unichr(7), 2)
 sleep(5) # 5 secdelay
 MYLCD.lcd_clear()
 MYLCD.lcd_display_string("RECALBOX "+VERSION[1], 1, 1)
