@@ -52,6 +52,7 @@ from lcdScroll import Scroller
 
 def get_language():
     """ find the language in recalbox.conf file and use translate texts"""
+    txt = []
     fic = open("/recalbox/share/system/recalbox.conf", 'r')
     for line in fic:
         if 'system.language=' in line:
@@ -59,39 +60,50 @@ def get_language():
             lang = lang.replace("\n", "")
             break
     else:
-        lang = "en_US"
+        lang = "en_GB"
     fic.close()
     # All Texts to translate are below, keep space, missing turkisk, chinese, basque.
     if lang == "fr_FR":
         txt = ("Hors-ligne", "ROM PAS SCRAP", "Temp CPU: ", "Fréq CPU: ", "Titre : ", \
-            " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
-            " - Année : ", " - Par : ", " - Pour : ", "Inconnu")
+               " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
+               " - Année : ", " - Par : ", " - Pour : ", "Inconnu", "Visionneuse")
         locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
     elif lang == "de_DE":
         txt = ("Offline", "ROM NICHT SCRAP", "CPU Temp: ", "CPU Freq: ", "Titel : ", \
                " - Platform : ", " - Genre : ", " - Spieler(n) : ", " - Bewertung : ", \
-               " - Jahr : ", " - Durch : ", " - Für : ", "Unbekannt")
+               " - Jahr : ", " - Durch : ", " - Für : ", "Unbekannt", "Viewer")
         locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
     elif lang == "pt_BR":
         txt = ("Desconectado", "ROM NO SCRAPE", "Temp CPU: ", "Frec CPU: ", "Título : ", \
                " - Plataforma : ", " - Tipo : ", " - Jogador(es) : ", " - Nota : ", \
-               " - Ano : ", " - Por : ", " - Para : ", "Desconhecido")
+               " - Ano : ", " - Por : ", " - Para : ", "Desconhecido", "Visualizador")
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
     elif lang == "es_ES" or lang == "eu_ES":
         txt = ("Desconectado", "ROM NO SCRAPEAR", "Temp CPU: ", "Frec CPU: ", "Titulo : ", \
                " - Plataforma : ", " - Genero : ", " - Jugador(s) : ", " - Nota : ", \
-               " - Año : ", " - Por : ", " - Para : ", "Desconocido")
+               " - Año : ", " - Por : ", " - Para : ", "Desconocido", "Viewer")
         locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
     elif lang == "it_IT":
         txt = ("Off line", "ROM NON SCRAP", "Temp CPU: ", "Freq CPU: ", "Titolo : ", \
                " - Piattaforma : ", " - Genere : ", " - Giocatori  : ", " - Note : ", \
-               " - Anno : ", " - Di : ", " - Per : ", "Sconosciuto")
+               " - Anno : ", " - Di : ", " - Per : ", "Sconosciuto", "Visualizzatore")
         locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
-    else:
+    elif lang == "en_US":
         txt = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :",\
         " - Platform: ", " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ",\
-        " - By: ", " - For: ", "Unknow")
+        " - By: ", " - For: ", "Unknow", "Viewer", "Sega Mark III", "Sega Genesis",\
+        "Genesis 32X", "Sega CD", "TurboGrafx-16", "TurboGrafx-CD")
         locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+        #Specific US game console name
+        return txt
+    else: # Great-Britain, en_GB not supported by recalbox
+        txt = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :",\
+        " - Platform: ", " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ",\
+        " - By: ", " - For: ", "Unknow", "Viewer")
+        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    # worldwide game console (except USA)
+    txt = txt + ("Master System", "Mega Drive", "Mega Drive 32X",\
+        "Mega-CD", "PC-Engine", "PC-Engine CD")
     return txt
 
 def run_cmd(cmd):
@@ -212,13 +224,14 @@ def get_ip_adr():
             ipaddr = unichr(1)+space+run_cmd(CMD_WLAN)
     return ipaddr
 
+# set language
+TXT = get_language()
 
-
-#liste des systèmes
+# liste des systèmes
 SYSTEMMAP = {
     # Nintendo
-    "snes":"Super Nes", # Super Famicon
-    "nes":"Nes ", # Famicom
+    "snes":"Super Nes", # Super Famicon (Japan)
+    "nes":"Nes ", # Famicom (Japan)
     "n64":"Nintendo 64",
     "gba":"GameBoy Advance",
     "gb":"GameBoy",
@@ -229,11 +242,11 @@ SYSTEMMAP = {
     "wii":"Wii",
     #Sega
     "sg1000":"SG-1000",
-    "mastersystem":"Master System", #Sega Mark III
-    "megadrive":"Mega Drive", #Sega Genesis
+    "mastersystem":TXT[14], #Master System
+    "megadrive":TXT[15], #Mega Drive
     "gamegear":"Game Gear",
-    "sega32x":"Mega Drive 32X ", #Genesis 32X
-    "segacd":"Mega-CD", #Sega CD
+    "sega32x":TXT[16], #Mega Drive 32X
+    "segacd":TXT[17], #Mega-CD
     "dreamcast":"Dreamcast",
     # Arcade
     "neogeo":"Neo-Geo",
@@ -263,9 +276,9 @@ SYSTEMMAP = {
     "lutro":"Lutro",
     "wswan":"WonderSwan",
     "wswanc":"WonderSwan Color",
-    "pcengine":"PC-Engine",#  TurboGrafx-16
-    "pcenginecd":"PC-Engine CD", #TurboGrafx-CD
-    "supergrafx":"PC Engine SuperGrafx",
+    "pcengine":TXT[18],   #PC-Engine
+    "pcenginecd":TXT[19], #PC-Engine CD
+    "supergrafx":"SuperGrafx",
     "atari2600":"Atari 2600",
     "atari7800":"Atari 7800",
     "prboom":"PrBoom",
@@ -275,9 +288,9 @@ SYSTEMMAP = {
     "colecovision":"ColecoVision",
     "psp":"PSP",    # PlayStation Portable
     # Logiciels
-    "kodi":"KODI",
+    "kodi":"Kodi",
     "moonlight":"Moonlight",
-    "imageviewer":"Visionneuse d'images",
+    "imageviewer":TXT[13],
     }
 
 #draw icons not existing in [a-z], max 8
@@ -291,9 +304,6 @@ ICONS = [
     [0b01110, 0b11111, 0b10101, 0b11111, 0b11111, 0b11111, 0b10101,	0b00000], # Ghost
     [0b10001, 0b01010, 0b11111, 0b10101, 0b11111, 0b11111, 0b01010, 0b11011] # Invader
     ]
-
-# set language
-TXT = get_language()
 
 # Detect network card, then IP Adress command
 ETH_NAME = run_cmd("ip addr show | awk '{print$2}' | grep eth | cut -f1 -d:")
