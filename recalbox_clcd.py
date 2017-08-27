@@ -3,7 +3,7 @@
 """
 recalbox_clcd.py
 Author       : Choum
-Creation DATE: 08/22/2017
+Creation DATE: 08/27/2017
 Blog        : https://forum.recalbox.com/topic/5777/relier-%C3%A0-un-%C3%A9cran-et-afficher-du-texte
 and original work : http://rasplay.org, http://forums.rasplay.org/, https://zzeromin.tumblr.com/
 
@@ -18,7 +18,7 @@ lcdScroll developed by: Eric Pavey
 Function run_cmd() from: AndyPi ( http://andypi.co.uk/ )
 
 #Notice:
-recalbox_clcd.py require I2C_LCD_driver.py, lcdScroll.py
+recalbox_clcd.py require I2C_LCD_driver.py, lcdScroll.py, recalbox_clcd.lang
 
 Small script written in Python 2.7 for recalbox project (https://www.recalbox.com/)
 running on Raspberry Pi 1,2,3, which displays all necessary info on a 16x2 LCD display
@@ -36,8 +36,9 @@ If you have a model HD44780A02 (support ASCII + european fonts), and want to dis
 characters, you will have to comment and uncomment some line in the script.
 Search 'HD44780A02' comment in the script.
 
-Script support English, French, German, Italian, Spanish, Portuguese language
-If language is unsupported, display will be in English
+This script support multiple recalbox language, exept those with non European characters
+Like Chinese, Russian, Greek, Japanese(has specific English text due to console name difference)
+If language is unsupported, display will be in English with European console name
 """
 import os
 import string
@@ -50,9 +51,14 @@ from time import sleep
 import I2C_LCD_driver
 from lcdScroll import Scroller
 
+def run_cmd(cmd):
+    """ runs whatever is in the cmd variable in the terminal"""
+    cde = Popen(cmd, shell=True, stdout=PIPE)
+    output = cde.communicate()[0]
+    return output
+
 def get_language():
-    """ find the language in recalbox.conf file and use translate texts"""
-    txt = []
+    """ find the language in recalbox.conf and return it"""
     fic = open("/recalbox/share/system/recalbox.conf", 'r')
     for line in fic:
         if 'system.language=' in line:
@@ -62,55 +68,30 @@ def get_language():
     else:
         lang = "en_GB"
     fic.close()
-    # All Texts to translate are below, keep space, missing turkisk, chinese, basque.
-    if lang == "fr_FR":
-        txt = ("Hors-ligne", "ROM PAS SCRAP", "Temp CPU: ", "Fréq CPU: ", "Titre : ", \
-               " - Plateforme : ", " - Genre : ", " - Joueur(s) : ", " - Note : ", \
-               " - Année : ", " - Par : ", " - Pour : ", "Inconnu", "Visionneuse")
-        locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
-    elif lang == "de_DE":
-        txt = ("Offline", "ROM NICHT SCRAP", "CPU Temp: ", "CPU Freq: ", "Titel : ", \
-               " - Platform : ", " - Genre : ", " - Spieler(n) : ", " - Bewertung : ", \
-               " - Jahr : ", " - Durch : ", " - Für : ", "Unbekannt", "Viewer")
-        locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
-    elif lang == "pt_BR":
-        txt = ("Desconectado", "ROM NO SCRAPE", "Temp CPU: ", "Frec CPU: ", "Título : ", \
-               " - Plataforma : ", " - Tipo : ", " - Jogador(es) : ", " - Nota : ", \
-               " - Ano : ", " - Por : ", " - Para : ", "Desconhecido", "Visualizador")
-        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-    elif lang == "es_ES" or lang == "eu_ES":
-        txt = ("Desconectado", "ROM NO SCRAPEAR", "Temp CPU: ", "Frec CPU: ", "Titulo : ", \
-               " - Plataforma : ", " - Genero : ", " - Jugador(s) : ", " - Nota : ", \
-               " - Año : ", " - Por : ", " - Para : ", "Desconocido", "Viewer")
-        locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
-    elif lang == "it_IT":
-        txt = ("Off line", "ROM NON SCRAP", "Temp CPU: ", "Freq CPU: ", "Titolo : ", \
-               " - Piattaforma : ", " - Genere : ", " - Giocatori  : ", " - Note : ", \
-               " - Anno : ", " - Di : ", " - Per : ", "Sconosciuto", "Visualizzatore")
-        locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
-    elif lang == "en_US":
-        txt = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :",\
-        " - Platform: ", " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ",\
-        " - By: ", " - For: ", "Unknow", "Viewer", "Sega Mark III", "Sega Genesis",\
-        "Genesis 32X", "Sega CD", "TurboGrafx-16", "TurboGrafx-CD")
-        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-        #Specific US game console name
-        return txt
-    else: # Great-Britain, en_GB not supported by recalbox
-        txt = ("Disconnect", "UNSCRAP ROM", "CPU Temp: ", "CPU Speed: ", "Title :",\
-        " - Platform: ", " - Genre: ", " - Player(s): ", " - Score: ", " - Year: ",\
-        " - By: ", " - For: ", "Unknow", "Viewer")
-        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-    # worldwide game console (except USA)
-    txt = txt + ("Master System", "Mega Drive", "Mega Drive 32X",\
-        "Mega-CD", "PC-Engine", "PC-Engine CD")
-    return txt
+    return lang
 
-def run_cmd(cmd):
-    """ runs whatever is in the cmd variable in the terminal"""
-    cde = Popen(cmd, shell=True, stdout=PIPE)
-    output = cde.communicate()[0]
-    return output
+def set_language(lang):
+    """set locale and find matching translation texts from input language or return English texts"""
+    translation = []
+    text = ""
+    with open("/recalbox/scripts/recalbox_clcd.lang", 'r') as fic:
+        for line in fic:
+            if lang in line:
+                text = str(line)
+    if text == "": # language code not found in translation, take English
+        with open("/recalbox/scripts/recalbox_clcd.lang", 'r') as fic:
+            for line in fic:
+                if "en_GB" in line:
+                    text = str(line)
+    text = text.replace('"', "")
+    text = text.replace(",", "\n")
+    translation = text.split("\n")
+    if lang in ("jp_JP", "en_GB"):
+        # for missing or incorrect locale
+        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    else:
+        locale.setlocale(locale.LC_ALL, lang+'.UTF-8')
+    return translation
 
 def get_cpu_temp():
     """ get the cpu temp """
@@ -145,8 +126,9 @@ def get_version():
     arch = arch.split('rpi', 1)[1]
     return (arch, version)
 
-def get_txt_betw(fulltext, text_before, text_after):
-    """ return text in fulltext between text_before & text_after if exist, else return N/A string"""
+def get_txt_betw(fulltext, text_before, text_after, text_notfound):
+    """ return text in fulltext between text_before & text_after if exist, else
+    return TxtNotFound string"""
     index = 0
     begin = -1
     end = -1
@@ -155,9 +137,9 @@ def get_txt_betw(fulltext, text_before, text_after):
         if len(fulltext[index:]) >= begin +len(text_before)+len(text_after):
             end = fulltext[index+begin +len(text_before):].find(text_after) # search end (count str)
     if begin == -1 or end == -1: # -1 = not found, found is between 0 et (fullText)-1
-        return TXT[12] # if not found return string
+        return text_notfound # if not found return string
     if fulltext[index + begin + len(text_before): index + begin+ len(text_before)+ end] == "":
-        return TXT[12]
+        return text_notfound
     return fulltext[index + begin + len(text_before): index + begin+ len(text_before)+ end]
                 # return string between start and end
 
@@ -171,27 +153,27 @@ def get_info_gamelist(path_gamelist, systeme):
     fic = open("/recalbox/share/roms/"+systeme+"/gamelist.xml", 'r') # Open file
     buf = fic.read()  # Read file into var
     fic.close()  # Close file
-    gamedata = get_txt_betw(buf, "<path>"+path_gamelist, "</game>")
+    gamedata = get_txt_betw(buf, "<path>"+path_gamelist, "</game>", TXT[13])
     tableau = []
-    if gamedata != TXT[12]:  # test if game is found in gamelist
-        tableau.append(get_txt_betw(gamedata, "<name>", "</name>"))
-        tableau.append(get_txt_betw(gamedata, "<desc>", "</desc>"))
-        tableau.append(get_txt_betw(gamedata, "<image>", "</image>"))
-        tableau.append(get_txt_betw(gamedata, "<rating>", "</rating>"))
-        tableau.append(get_txt_betw(gamedata, "<releasedate>", "</releasedate>"))
-        tableau.append(get_txt_betw(gamedata, "<developer>", "</developer>"))
-        tableau.append(get_txt_betw(gamedata, "<publisher>", "</publisher>"))
-        tableau.append(get_txt_betw(gamedata, "<genre>", "</genre>"))
-        tableau.append(get_txt_betw(gamedata, "<players>", "</players>"))
+    if gamedata != TXT[13]:  # test if game is found in gamelist
+        tableau.append(get_txt_betw(gamedata, "<name>", "</name>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<desc>", "</desc>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<image>", "</image>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<rating>", "</rating>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<releasedate>", "</releasedate>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<developer>", "</developer>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<publisher>", "</publisher>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<genre>", "</genre>", TXT[13]))
+        tableau.append(get_txt_betw(gamedata, "<players>", "</players>", TXT[13]))
         tableau.append(SYSTEMMAP.get(systeme))
-        if tableau[4] != TXT[12]: # test if date exist then keep only year
+        if tableau[4] != TXT[13]: # test if date exist then keep only year
             tableau[4] = tableau[4][:-11]
-        if tableau[3] != TXT[12]:
+        if tableau[3] != TXT[13]:
             tableau[3] = str(float(tableau[3])*10) # rating to 10 instead of 1 if rating exist
         tableau = [x.replace('&amp;', '&') for x in tableau] # Fix for & xml character
     else: # msg if rom not present in gamelist (fill list)
         for txt in range(10):
-            txt = TXT[1]
+            txt = TXT[2]
             tableau.append(txt)
     # Comment or delete the next line if you have an HD44780A02
     tableau = [conv_ascii(x) for x in tableau]
@@ -207,7 +189,7 @@ def get_ip_adr():
     if ipaddr == "":
         ipaddr = run_cmd(CMD_ETH).replace("\n", "")
         if ipaddr == "":
-            ipaddr = unichr(0)+unichr(1)+"  "+TXT[0] # Txt disconnect if no lan or wifi ip
+            ipaddr = unichr(0)+unichr(1)+"  "+TXT[1] # Txt disconnect if no lan or wifi ip
         else:
             if len(ipaddr) == 15:
                 ipaddr = unichr(0)+run_cmd(CMD_ETH)
@@ -226,71 +208,32 @@ def get_ip_adr():
 
 # set language
 TXT = get_language()
+TXT = set_language(TXT)
 
 # liste des systèmes
 SYSTEMMAP = {
-    # Nintendo
-    "snes":"Super Nes", # Super Famicon (Japan)
-    "nes":"Nes ", # Famicom (Japan)
-    "n64":"Nintendo 64",
-    "gba":"GameBoy Advance",
-    "gb":"GameBoy",
-    "gbc":"GameBoy Color",
-    "fds":"Famicom Disk System",
-    "virtualboy":"Virtual Boy",
-    "gamecube":"GameCube",
-    "wii":"Wii",
-    #Sega
-    "sg1000":"SG-1000",
-    "mastersystem":TXT[14], #Master System
-    "megadrive":TXT[15], #Mega Drive
-    "gamegear":"Game Gear",
-    "sega32x":TXT[16], #Mega Drive 32X
-    "segacd":TXT[17], #Mega-CD
-    "dreamcast":"Dreamcast",
+    # Nintendo (Super Famicon, Famicon (Japan)
+    "snes":TXT[21], "nes":TXT[22], "n64":"Nintendo 64", "gba":"GameBoy Advance", "gb":"GameBoy",\
+    "gbc":"GameBoy Color", "fds":"Famicom Disk System", "virtualboy":"Virtual Boy",\
+    "gamecube":"GameCube", "wii":"Wii",
+    #Sega (Master System, Mega Drive, 32X, Mega cd)
+    "sg1000":"SG-1000", "mastersystem":TXT[15], "megadrive":TXT[16], "gamegear":"Game Gear",\
+    "sega32x":TXT[17], "segacd":TXT[18], "dreamcast":"Dreamcast",
     # Arcade
-    "neogeo":"Neo-Geo",
-    "mame":"MAME-libretro",
-    "fba":"FinalBurn Alpha",
-    "fba_libretro":"FinalBurn Alpha libretro",
-    "advancemame":"Advance MAME",
+    "neogeo":"Neo-Geo", "mame":"MAME-libretro", "fba":"FinalBurn Alpha",\
+    "fba_libretro":"FinalBurn Alpha libretro", "advancemame":"Advance MAME",\
     # Computers
-    "msx":"MSX",
-    "msx1":"MSX1",
-    "msx2":"MSX2",
-    "amiga":"Amiga",
-    "amstradcpc":"Amstrad CPC",
-    "apple2":"Apple II",
-    "atarist":"Atari ST",
-    "zxspectrum":"ZX Spectrum",
-    "o2em":"Odyssey 2",
-    "zx81":"Sinclair ZX81",
-    "dos":"MS-DOS",
-    "c64":"Commodore 64",
-    # autres
-    "ngp":"Neo-Geo Pocket",
-    "ngpc":"Neo-Geo Pocket Color",
-    "gw":"Game and Watch",
-    "vectrex":"Vectrex",
-    "lynx":"Atari Lynx",
-    "lutro":"Lutro",
-    "wswan":"WonderSwan",
-    "wswanc":"WonderSwan Color",
-    "pcengine":TXT[18],   #PC-Engine
-    "pcenginecd":TXT[19], #PC-Engine CD
-    "supergrafx":"SuperGrafx",
-    "atari2600":"Atari 2600",
-    "atari7800":"Atari 7800",
-    "prboom":"PrBoom",
-    "psx":"PlayStation",
-    "cavestory":"Cave Story",
-    "scummvm":"ScummVM",
-    "colecovision":"ColecoVision",
-    "psp":"PSP",    # PlayStation Portable
-    # Logiciels
-    "kodi":"Kodi",
-    "moonlight":"Moonlight",
-    "imageviewer":TXT[13],
+    "msx":"MSX", "msx1":"MSX1", "msx2":"MSX2", "amiga":"Amiga", "amstradcpc":"Amstrad CPC",\
+    "apple2":"Apple II", "atarist":"Atari ST", "zxspectrum":"ZX Spectrum", "o2em":"Odyssey 2",\
+    "zx81":"Sinclair ZX81", "dos":"MS-DOS", "c64":"Commodore 64",
+    # Other (#PC-Engine, PC-Engine CD, Image viewer)
+    "ngp":"Neo-Geo Pocket", "ngpc":"Neo-Geo Pocket Color", "gw":"Game and Watch",\
+    "vectrex":"Vectrex", "lynx":"Atari Lynx", "lutro":"Lutro", "wswan":"WonderSwan",\
+    "wswanc":"WonderSwan Color", "pcengine":TXT[19], "pcenginecd":TXT[20],\
+    "supergrafx":"SuperGrafx", "atari2600":"Atari 2600", "atari7800":"Atari 7800",\
+    "prboom":"PrBoom", "psx":"PlayStation", "cavestory":"Cave Story", "scummvm":"ScummVM",\
+    "colecovision":"ColecoVision", "psp":"PSP", "kodi":"Kodi", "moonlight":"Moonlight",\
+    "imageviewer":TXT[14],
     }
 
 #draw icons not existing in [a-z], max 8
@@ -301,7 +244,7 @@ ICONS = [
     [0b00000, 0b00100, 0b01110, 0b01010, 0b10001, 0b11111, 0b00000, 0b00000], # logo Triangle
     [0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110, 0b00000, 0b00000], # logo Circle
     [0b00000, 0b11111, 0b10001, 0b10001, 0b10001, 0b11111, 0b00000, 0b00000],  # logo Square
-    [0b01110, 0b11111, 0b10101, 0b11111, 0b11111, 0b11111, 0b10101,	0b00000], # Ghost
+    [0b01110, 0b11111, 0b10101, 0b11111, 0b11111, 0b11111, 0b10101, 0b00000], # Ghost
     [0b10001, 0b01010, 0b11111, 0b10101, 0b11111, 0b11111, 0b01010, 0b11011] # Invader
     ]
 
@@ -363,8 +306,8 @@ while 1:
         for i in range(5 - len(str(NEW_SPEED))):
             SPACE = SPACE + " "
         # Display CPU temp and speed
-        MYLCD.lcd_display_string(TXT[2]+ str(NEW_TEMP), 1, 0)
-        MYLCD.lcd_display_string(TXT[3]+ SPACE + str(NEW_SPEED), 2, 0)
+        MYLCD.lcd_display_string(TXT[3]+ str(NEW_TEMP), 1, 0)
+        MYLCD.lcd_display_string(TXT[4]+ SPACE + str(NEW_SPEED), 2, 0)
         SEC = SEC + 1
         sleep(1)
     SEC = 0
@@ -372,8 +315,8 @@ while 1:
         # show system & rom file information
         RESULT = run_cmd("ps | grep emulatorlauncher.py | grep -v 'c python' | grep -v grep")
         if RESULT != "":
-            (SYSTEME) = get_txt_betw(RESULT, "-system ", " -rom ")
-            (ROM) = get_txt_betw(RESULT, "-rom ", " -emulator ")
+            (SYSTEME) = get_txt_betw(RESULT, "-system ", " -rom ", TXT[13])
+            (ROM) = get_txt_betw(RESULT, "-rom ", " -emulator ", TXT[13])
             if SYSTEME != "kodi": # Skip if kodi as it do not use gamelist and do not have rom info
                 if OLD_ROM != ROM: # Skip search if rom is still the same.
                     OLD_ROM = ROM
@@ -383,9 +326,9 @@ while 1:
                         NOM_GAMELIST = os.path.dirname(NOM_GAMELIST)
                     # Search info in gamelist and prepare Display message for scrolling of line 2
                     ROM_INFO = get_info_gamelist(NOM_GAMELIST, SYSTEME)
-                    INFO_ROM = TXT[4] + ROM_INFO[0] + TXT[5] + ROM_INFO[9] + TXT[6] + ROM_INFO[7] +\
-                               TXT[7] + ROM_INFO[8] + TXT[8] + ROM_INFO[3] + TXT[9] + ROM_INFO[4] +\
-                               TXT[10] + ROM_INFO[5] + TXT[11]+ ROM_INFO[6] +"."
+                    INFO_ROM = TXT[5] + ROM_INFO[0] + TXT[6] + ROM_INFO[9] + TXT[7] + ROM_INFO[7] +\
+                               TXT[8] + ROM_INFO[8] + TXT[9] + ROM_INFO[3] + TXT[10] + ROM_INFO[4]\
+                               + TXT[11] + ROM_INFO[5] + TXT[12]+ ROM_INFO[6] +"."
                 # Create scroller instance:
                     SCROLLER = Scroller(lines=INFO_ROM)
                 WAIT = 0

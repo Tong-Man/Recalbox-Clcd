@@ -92,7 +92,8 @@ mount -o remount, rw /
 ```
 
 * Copiez
-        recalbox_clcd.py 
+        recalbox_clcd.py
+        recalbox_clcd.lang 
         recalbox_clcd_off.py
         I2C_LCD_driver.py
         lcdScroll.py 
@@ -106,7 +107,7 @@ mount -o remount, rw /
 
 ```
 Chmod +x /recalbox/scripts/recalbox_clcd_off.py
-Chmod +x /recalbox/scripts/recalbox_clcd_off.py
+Chmod +x /recalbox/scripts/recalbox_clcd.py
 Chmod +x /recalbox/scripts/I2C_LCD_driver.py
 Chmod +x /recalbox/scripts/lcdScroll.py
 Chmod +x /etc/init.d/S97LCDInfoText
