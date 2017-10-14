@@ -57,10 +57,20 @@ i2c-dev
 ```
 
 * Editez le fichier /boot/config.txt
-ajoutez à **la fin de ligne**
+* Ajouter les lignes suivantes : 
+```
+#Activate I2C
+dtparam=i2c1=on
+dtparam=i2c_arm=on
+```
+
+
+* Editez le fichier /boot/cmdline.txt
+* ajoutez à **la fin de ligne**
 ```
 bcm2708.vc_i2c_override=1
 ```
+
 *  rédémarrez votre recalbox
 
 

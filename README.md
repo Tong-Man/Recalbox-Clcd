@@ -58,6 +58,14 @@ i2c-dev
 ```
 
 * Edit the /boot/config.txt
+* add following lines in it:
+```
+#Activate I2C
+dtparam=i2c1=on
+dtparam=i2c_arm=on
+```
+
+* Edit the /boot/cmdline.txt
 add at **the end of line**
 ```
 bcm2708.vc_i2c_override=1
