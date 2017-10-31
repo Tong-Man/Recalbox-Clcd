@@ -104,7 +104,8 @@ mount -o remount, rw /
         recalbox_clcd.py 
         recalbox_clcd_off.py
         I2C_LCD_driver.py
-        lcdScroll.py 
+        lcdScroll.py
+        recalbox_clcd.lang
     to **/recalbox/scripts** folder with winscp for example
 
 * Copy 
@@ -114,11 +115,12 @@ mount -o remount, rw /
 * then give execute right on all file
 
 ```
-Chmod +x /recalbox/scripts/recalbox_clcd_off.py
-Chmod +x /recalbox/scripts/recalbox_clcd_off.py
-Chmod +x /recalbox/scripts/I2C_LCD_driver.py
-Chmod +x /recalbox/scripts/lcdScroll.py
-Chmod +x /etc/init.d/S97LCDInfoText
+chmod +x /recalbox/scripts/recalbox_clcd.py
+chmod +x /recalbox/scripts/recalbox_clcd_off.py
+chmod +x /recalbox/scripts/recalbox_clcd.lang
+chmod +x /recalbox/scripts/I2C_LCD_driver.py
+chmod +x /recalbox/scripts/lcdScroll.py
+chmod +x /etc/init.d/S97LCDInfoText
 ```
 
 * edit line #22 in I2C_LCD_driver.py in /recalbox/scripts with the correct I2C adress, you have recover before (in our example :0x27).
